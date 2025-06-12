@@ -62,7 +62,7 @@ export default function LoginPage() {
             </div>
             <CardTitle className="text-2xl">Welcome Back</CardTitle>
             <CardDescription>
-              Sign in to your ApparelBiz account
+              Sign in to your Sino-Indo Apparel Matcher account
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -118,14 +118,13 @@ export default function LoginPage() {
                   Forgot password?
                 </Link>
               </div>
-              
-                <Button
-                  type="submit"
-                  className="w-full bg-emerald-600 hover:bg-emerald-700"
-                >
-                  Sign In
-                </Button>
-              
+
+              <Button
+                type="submit"
+                className="w-full bg-emerald-600 hover:bg-emerald-700"
+              >
+                Sign In
+              </Button>
             </form>
 
             <div className="mt-6 text-center">

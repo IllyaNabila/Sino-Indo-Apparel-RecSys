@@ -53,7 +53,7 @@ export default function RegisterPage() {
     try {
       const response = await axios.post('/api/users/register', formData)
       console.log("Signup success", response.data);
-      router.push('/auth/survey')
+      router.push('/auth/business-details')
     } catch (error: any) {
       console.log("Signup failed", error.message);
       
