@@ -1,33 +1,45 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { ArrowLeft, Shield } from "lucide-react"
-import Link from "next/link"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Shield } from "lucide-react";
+import Link from "next/link";
 
 export default function AdminLoginPage() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-  })
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     // Validate email/password
-    console.log("Admin login:", { email: formData.email, password: formData.password })
+    console.log("Admin login:", {
+      email: formData.email,
+      password: formData.password,
+    });
     // Redirect to admin dashboard
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="mb-6">
-          <Link href="/auth/login" className="inline-flex items-center text-slate-600 hover:text-slate-800">
+          <Link
+            href="/auth/login"
+            className="inline-flex items-center text-slate-600 hover:text-slate-800"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to User Login
           </Link>
@@ -48,9 +60,11 @@ export default function AdminLoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@apparelbiz.com"
+                  placeholder="admin@Sino-Indo Apparel Matcher.com"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   required
                 />
               </div>
@@ -62,26 +76,34 @@ export default function AdminLoginPage() {
                   type="password"
                   placeholder="Enter your admin password"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
                   required
                 />
               </div>
               <Link href="/admin">
-                <Button type="submit" className="w-full bg-red-600 hover:bg-red-700">
+                <Button
+                  type="submit"
+                  className="w-full bg-red-600 hover:bg-red-700"
+                >
                   Sign In
                 </Button>
               </Link>
             </form>
 
             <div className="mt-6 p-4 bg-red-50 rounded-lg border border-red-200">
-              <p className="text-sm text-red-800 font-medium mb-1">Security Notice</p>
+              <p className="text-sm text-red-800 font-medium mb-1">
+                Security Notice
+              </p>
               <p className="text-xs text-red-700">
-                Admin access requires secure authentication. All admin actions are logged and monitored.
+                Admin access requires secure authentication. All admin actions
+                are logged and monitored.
               </p>
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
-  )
+  );
 }
