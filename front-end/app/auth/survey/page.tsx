@@ -12,7 +12,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge"
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
-import { Input } from "@/components/ui/input"
+import { Input } from "@/components/ui/input";
 import {
   ArrowLeft,
   ArrowRight,
@@ -30,10 +30,13 @@ import {
   Building2,
   Target,
   Globe,
-  TrendingUp, Plus,X
+  TrendingUp,
+  Plus,
+  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Link from "next/link"
+import Link from "next/link";
+import axios from "axios";
 
 interface SurveyData {
   // Business Information
@@ -45,16 +48,15 @@ interface SurveyData {
   materials: string[];
   priceRange: number[];
   volumeRange: number[];
-  customPreferences: string[]
-  seasonPreferences: string[]
-
+  customPreferences: string[];
+  seasonPreferences: string[];
 }
 
 export default function SurveyPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
-  const [customTags, setCustomTags] = useState<string[]>([])
-  const [newTag, setNewTag] = useState("")   
+  const [customTags, setCustomTags] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState("");
   const [surveyData, setSurveyData] = useState<SurveyData>({
     companySize: "",
     primaryMarkets: [],
@@ -63,7 +65,7 @@ export default function SurveyPage() {
     priceRange: [10, 50],
     volumeRange: [500, 5000],
     customPreferences: [],
-    seasonPreferences: []
+    seasonPreferences: [],
   });
 
   const totalSteps = 3;
@@ -81,10 +83,21 @@ export default function SurveyPage() {
     }
   };
 
-  const handleSubmit = () => {
-    console.log("Survey completed:", surveyData);
-    // Here you would typically send the data to your backend
-    router.push("/dashboard");
+  const handleSubmit = async () => {
+    try {
+      console.log(surveyData)
+      const response = await axios.post("/api/users/survey", {
+        surveyData,
+        customTags
+      });
+      console.log("Saved:", response.data);
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error(
+        "Error submitting preferences:",
+        error.response?.data || error.message
+      );
+    }
   };
 
   const handleArrayToggle = (field: keyof SurveyData, value: string) => {
@@ -98,25 +111,26 @@ export default function SurveyPage() {
   };
 
   const addCustomTag = (e: React.FormEvent) => {
-      e.preventDefault()
-      if (newTag.trim() && !customTags.includes(newTag.trim())) {
-        setCustomTags([...customTags, newTag.trim()])
-        setNewTag("")
-      }
+    e.preventDefault();
+    if (newTag.trim() && !customTags.includes(newTag.trim())) {
+      setCustomTags([...customTags, newTag.trim()]);
+      setNewTag("");
     }
+  };
 
-    const removeCustomTag = (tag: string) => {
-    setCustomTags(customTags.filter((t) => t !== tag))
-  }
+  const removeCustomTag = (tag: string) => {
+    setCustomTags(customTags.filter((t) => t !== tag));
+  };
 
   const renderStep1 = () => (
     <div className="space-y-6">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-slate-800">Market Focus</h2>
-        <p className="text-slate-600">This helps us understand your region of interest</p>
+        <p className="text-slate-600">
+          This helps us understand your region of interest
+        </p>
       </div>
       <div className="space-y-4">
-        
         <div>
           <Label className="text-base font-medium mb-2">
             Primary Markets (Select all that apply)
@@ -174,9 +188,11 @@ export default function SurveyPage() {
 
   const renderStep2 = () => (
     <div className="space-y-6">
-        <div className="text-center mb-6">
+      <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-slate-800">Product Focus</h2>
-        <p className="text-slate-600">Help us understand what products you work with</p>
+        <p className="text-slate-600">
+          Help us understand what products you work with
+        </p>
       </div>
       <div className="space-y-6">
         <div>
@@ -248,55 +264,55 @@ export default function SurveyPage() {
             ))}
           </div>
         </div>
-
       </div>
     </div>
   );
 
   const renderStep3 = () => (
     <div className="space-y-6">
-
-    <div className="text-center mb-6">
+      <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-slate-800">Custom Tags</h2>
-        <p className="text-slate-600">Add any additional preferences or requirements of your discovery</p>
-    </div>
+        <p className="text-slate-600">
+          Add any additional preferences or requirements of your discovery
+        </p>
+      </div>
 
-    <div className="space-y-4">
-    <div className="flex flex-wrap gap-2 mb-4">
-      {customTags.map((tag) => (
-        <Badge key={tag} variant="secondary" className="gap-1 px-3 py-1">
-          {tag}
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-2 mb-4">
+          {customTags.map((tag) => (
+            <Badge key={tag} variant="secondary" className="gap-1 px-3 py-1">
+              {tag}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-4 w-4 p-0 ml-1"
+                onClick={() => removeCustomTag(tag)}
+              >
+                <X className="h-3 w-3" />
+                <span className="sr-only">Remove {tag}</span>
+              </Button>
+            </Badge>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <Input
+            placeholder="Add a custom tag"
+            value={newTag}
+            onChange={(e) => setNewTag(e.target.value)}
+            className="flex-1"
+          />
           <Button
             type="button"
-            variant="ghost"
-            size="icon"
-            className="h-4 w-4 p-0 ml-1"
-            onClick={() => removeCustomTag(tag)}
+            variant="outline"
+            onClick={addCustomTag}
+            disabled={!newTag.trim()}
           >
-            <X className="h-3 w-3" />
-            <span className="sr-only">Remove {tag}</span>
+            <Plus className="h-4 w-4 mr-1" /> Add
           </Button>
-        </Badge>
-      ))}
-    </div>
-
-    <div className="flex gap-2">
-      <Input
-        placeholder="Add a custom tag"
-        value={newTag}
-        onChange={(e) => setNewTag(e.target.value)}
-        className="flex-1"
-      />
-      <Button
-        type="button"
-        variant="outline"
-        onClick={addCustomTag}
-        disabled={!newTag.trim()}
-      >
-        <Plus className="h-4 w-4 mr-1" /> Add
-      </Button>
-    </div>
-  </div>
+        </div>
+      </div>
     </div>
   );
 
@@ -314,7 +330,6 @@ export default function SurveyPage() {
         </div>
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center pb-6">
-            
             <CardDescription>
               Complete this quick survey to personalize your experience and get
               better recommendations

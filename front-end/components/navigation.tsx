@@ -41,7 +41,7 @@ export default function Navigation() {
   const router = useRouter();
   const logout = async () => {
     try {
-      await axios.get("/api/users/logout");
+      await axios.get("/api/auth/logout");
       toast.success("Logged out successfully");
       router.push("/");
     } catch (error: any) {
@@ -58,15 +58,16 @@ export default function Navigation() {
         <div className="flex flex-col flex-grow pt-5 pb-4 overflow-y-auto">
           {/* Logo */}
           <div className="flex items-center flex-shrink-0 px-4">
-            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+            {/*<div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">AB</span>
             </div>
+            <img src="/sino-indo logo.png" className="w-8 h-8 rounded-lg"></img>*/}
             <span className="ml-2 font-bold text-xl text-slate-800">
               Sino-Indo Apparel Matcher
             </span>
           </div>
 
-          {/* User Status */}
+          {/* User Status 
           <div className="mt-6 px-4">
             <div className="flex items-center space-x-2 p-3 bg-emerald-50 rounded-lg">
               <CheckCircle className="h-4 w-4 text-emerald-600" />
@@ -74,7 +75,7 @@ export default function Navigation() {
                 Verified Business
               </span>
             </div>
-          </div>
+          </div>*/}
 
           {/* Navigation */}
           <nav className="mt-6 flex-1 px-2 space-y-1">
@@ -84,20 +85,20 @@ export default function Navigation() {
                 href={item.href}
                 className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
                   isActive(item.href)
-                    ? "bg-emerald-100 text-emerald-900"
+                    ? "bg-blue-100 text-blue-700"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >
                 <item.icon
                   className={`mr-3 h-5 w-5 ${
                     isActive(item.href)
-                      ? "text-emerald-500"
+                      ? "text-blue-700"
                       : "text-slate-400 group-hover:text-slate-500"
                   }`}
                 />
                 {item.name}
                 {item.badge && (
-                  <Badge className="ml-auto bg-emerald-600 text-white">
+                  <Badge className="ml-auto bg-blue-500 text-white">
                     {item.badge}
                   </Badge>
                 )}
@@ -123,7 +124,7 @@ export default function Navigation() {
             </Link>
             <button
               onClick={logout}
-              className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              className="group flex w-full items-center px-2 py-2 text-sm font-medium rounded-md text-slate-600 hover:bg-slate-50 hover:text-slate-900"
             >
               <LogOut className="mr-3 h-5 w-5 text-slate-400 group-hover:text-slate-500" />
               Log Out

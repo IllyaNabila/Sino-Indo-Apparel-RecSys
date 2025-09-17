@@ -32,7 +32,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await axios.post("/api/users/login", formData);
+      const response = await axios.post("/api/auth/login", formData);
       console.log("Login success", response.data);
       toast.success("Login success");
       router.push("/dashboard");

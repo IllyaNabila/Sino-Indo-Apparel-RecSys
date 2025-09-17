@@ -1,57 +1,104 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Progress } from "@/components/ui/progress"
-import Link from "next/link"
-import { ArrowLeft, ArrowRight, Upload, FileText, AlertCircle, CheckCircle2 } from "lucide-react"
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Upload,
+  FileText,
+  AlertCircle,
+  CheckCircle2,
+} from "lucide-react";
+import axios from "axios";
+import { useRef } from "react";
 
 export default function LicenseUploadPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const role = searchParams.get("role") || "importer"
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const role = searchParams.get("role") || "importer";
 
-  const [file, setFile] = useState<File | null>(null)
-  const [uploading, setUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [uploadComplete, setUploadComplete] = useState(false)
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadComplete, setUploadComplete] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0])
+      setFile(e.target.files[0]);
     }
-  }
+  };
 
-  const handleUpload = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!file) return
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
 
-    setUploading(true)
-    setUploadProgress(0)
+      reader.onload = () => {
+        const base64String = reader.result?.toString().split(",")[1];
+        if (base64String) resolve(base64String);
+        else reject("Conversion failed");
+      };
 
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setUploading(false)
-          setUploadComplete(true)
-          return 100
-        }
-        return prev + 10
-      })
-    }, 300)
-  }
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file) return;
+
+    setUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const base64Data = await convertToBase64(file);
+
+      // Simulate upload progress
+      const interval = setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            setUploading(false);
+            setUploadComplete(true);
+            return 100;
+          }
+          return prev + 10;
+        });
+      }, 300);
+
+      const response = await axios.post("/api/users/license-upload", {
+        filename: file.name,
+        mimetype: file.type,
+        data: base64Data,
+      });
+
+      console.log("Upload success:", response.data);
+    } catch (error: any) {
+      console.error("Upload error:", error.response?.data || error.message);
+      setUploading(false);
+    }
+  };
 
   const handleContinue = () => {
-    router.push(`/auth/survey`)
-  }
+    router.push(`/auth/survey`);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
@@ -66,22 +113,22 @@ export default function LicenseUploadPage() {
           </Link>
         </div>
 
-        
-
         <Card>
-
           <div className="mb-8">
-          <h1 className="text-2xl font-bold text-center">Business License Verification</h1>
-          <p className="text-center text-muted-foreground mt-2">
-            Please upload your business license or registration certificate for verification
-          </p>
+            <h1 className="text-2xl font-bold text-center">
+              Business License Verification
+            </h1>
+            <p className="text-center text-muted-foreground mt-2">
+              Please upload your business license or registration certificate
+              for verification
+            </p>
           </div>
 
           <CardHeader>
             <CardTitle>Upload Business License</CardTitle>
             <CardDescription>
-              Your business license will be verified by our system. This helps ensure all partners on our platform are
-              legitimate businesses.
+              Your business license will be verified by our system. This helps
+              ensure all partners on our platform are legitimate businesses.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -90,8 +137,9 @@ export default function LicenseUploadPage() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Important</AlertTitle>
                 <AlertDescription>
-                  Your document must be a valid business license or registration certificate issued by a government
-                  authority. Accepted formats: PDF, JPG, PNG (max 10MB).
+                  Your document must be a valid business license or registration
+                  certificate issued by a government authority. Accepted
+                  formats: PDF, JPG, PNG (max 10MB).
                 </AlertDescription>
               </Alert>
 
@@ -101,17 +149,21 @@ export default function LicenseUploadPage() {
                     <Upload className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="font-medium">Drag and drop your file here or click to browse</p>
+                    <p className="font-medium">
+                      Drag and drop your file here or click to browse
+                    </p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Your document will be securely stored and only used for verification purposes
+                      Your document will be securely stored and only used for
+                      verification purposes
                     </p>
                   </div>
                   <Input
                     id="license"
                     type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
+                    accept=".pdf,.jpg,.png"
                     className="hidden"
                     onChange={handleFileChange}
+                    ref={fileInputRef}
                   />
                   <Button
                     type="button"
@@ -135,7 +187,19 @@ export default function LicenseUploadPage() {
                       </p>
                     </div>
                   </div>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setFile(null)} disabled={uploading}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setFile(null);
+                      setUploadComplete(false);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = ""; // 👈 clear native input value
+                      }
+                    }}
+                    disabled={uploading}
+                  >
                     Remove
                   </Button>
                 </div>
@@ -154,10 +218,12 @@ export default function LicenseUploadPage() {
               {uploadComplete && (
                 <Alert className="bg-green-50 border-green-200 text-green-800">
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <AlertTitle className="text-green-800">Upload Complete</AlertTitle>
+                  <AlertTitle className="text-green-800">
+                    Upload Complete
+                  </AlertTitle>
                   <AlertDescription className="text-green-700">
-                    Your business license has been uploaded successfully and is pending verification. This typically
-                    takes 1-2 business days.
+                    Your business license has been uploaded successfully and is
+                    pending verification. This typically takes 1-2 working days.
                   </AlertDescription>
                 </Alert>
               )}
@@ -169,7 +235,7 @@ export default function LicenseUploadPage() {
                   </Button>
                 )}
                 {uploadComplete && (
-                  <Button onClick={handleContinue} className="gap-2">
+                  <Button type="button" onClick={handleContinue} className="gap-2">
                     Continue to Preferences <ArrowRight className="h-4 w-4" />
                   </Button>
                 )}
@@ -178,13 +244,16 @@ export default function LicenseUploadPage() {
           </CardContent>
           <CardFooter className="text-sm text-muted-foreground flex flex-col items-start">
             <p>
-              Your document will be reviewed by our verification team. You will be notified once the verification is
-              complete.
+              Your document will be reviewed by our verification team. You will
+              be notified once the verification is complete.
             </p>
-            <p className="mt-2">If verification fails, you will be able to see the reason and upload a new document.</p>
+            <p className="mt-2">
+              If verification fails, you will be able to see the reason and
+              upload a new document.
+            </p>
           </CardFooter>
         </Card>
       </div>
     </div>
-  )
+  );
 }

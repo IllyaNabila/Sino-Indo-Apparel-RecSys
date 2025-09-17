@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Upload, X, Plus, Save, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import axios from "axios"
 
 interface ProductFormData {
   name: string
@@ -120,6 +121,7 @@ export default function NewProductPage() {
       newErrors.priceMax = "Maximum price must be greater than minimum price"
     }
 
+    {/**/}
     if (formData.images.length === 0) {
       newErrors.images = "At least one product image is required"
     }
@@ -127,8 +129,25 @@ export default function NewProductPage() {
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
+{/** */}
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const convertToBase64 = (file: File): Promise<string> =>{
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+
+      reader.onload = () => {
+        const base64String = reader.result?.toString().split(",")[1];
+        if (base64String) resolve(base64String);
+        else reject("Conversion failed");
+      };
+
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault()
     const files = Array.from(e.target.files || [])
     if (files.length > 0) {
       setFormData({ ...formData, images: [...formData.images, ...files] })
@@ -137,7 +156,7 @@ export default function NewProductPage() {
         setErrors({ ...errors, images: "" })
       }
     }
-  }
+  };
 
   const removeImage = (index: number) => {
     const newImages = formData.images.filter((_, i) => i !== index)
@@ -176,11 +195,16 @@ export default function NewProductPage() {
     setIsSubmitting(true)
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Convert all images to base64
+      const base64Images = await Promise.all(
+        formData.images.map((file) => convertToBase64(file))
+      );
 
+      // Simulate API call
+      const response = await axios.post('/api/products', {...formData, images: base64Images,});
       const productData = {
         ...formData,
+        images: base64Images,
         price: `$${formData.priceMin}-${formData.priceMax}`,
         moq: `${formData.moq} pcs`,
         id: Date.now(), // Generate temporary ID
@@ -190,7 +214,7 @@ export default function NewProductPage() {
       }
 
       console.log("Creating product:", productData)
-
+      console.log("Saved:", response.data);
       // Redirect to products page
       router.push("/products")
     } catch (error) {
@@ -317,7 +341,7 @@ export default function NewProductPage() {
             </CardContent>
           </Card>
 
-          {/* Pricing and MOQ */}
+          {/**  Pricing and MOQ**/}
           <Card>
             <CardHeader>
               <CardTitle>Pricing & Order Details</CardTitle>
@@ -398,9 +422,9 @@ export default function NewProductPage() {
                 />
               </div>
             </CardContent>
-          </Card>
+          </Card> 
 
-          {/* Product Images */}
+          {/** Product Images **/}
           <Card>
             <CardHeader>
               <CardTitle>
@@ -429,13 +453,13 @@ export default function NewProductPage() {
                   <p className="text-sm text-slate-500">PNG, JPG up to 5MB each. Multiple images allowed.</p>
                 </div>
               </div>
-
+{/***/}
               {errors.images && (
                 <p className="text-sm text-red-500 flex items-center">
                   <AlertCircle className="h-3 w-3 mr-1" />
                   {errors.images}
                 </p>
-              )}
+              )} 
 
               {/* Image Preview */}
               {formData.images.length > 0 && (

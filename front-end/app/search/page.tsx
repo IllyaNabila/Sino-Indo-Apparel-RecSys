@@ -67,7 +67,7 @@ export default function SearchPage() {
       id: "1",
       type: "assistant",
       content:
-        '👋 Hi! I\'m your AI search assistant. I can help you find products, suppliers, or business partners. Just tell me what you\'re looking for in natural language!\n\nFor example, you could say:\n• "I need organic cotton t-shirts from Indonesia under $15"\n• "Find me sustainable fabric suppliers in Southeast Asia"\n• "Show me denim manufacturers with fast delivery"',
+        '👋 Hi! I\'m your AI search assistant. I can help you find products, suppliers, or business partners. Just tell me what you\'re looking for in natural language!\n\nFor example, you could say:\n• "I need organic cotton t-shirts from China under $15"\n• "Find me sustainable fabric suppliers in China"\n• "Show me denim manufacturers with fast delivery"',
       timestamp: new Date(),
       suggestions: [
         "Find organic cotton suppliers",
@@ -93,14 +93,24 @@ export default function SearchPage() {
     scrollToBottom()
   }, [messages])
 
-  // Mock search results
-  const mockProductResults: SearchResult[] = [
+const currentUserProfile = {
+  preferences: {
+    materials: ["Organic Cotton", "Bamboo"],
+    category: ["T-Shirts", "Eco Wear"],
+    customTags: ["sustainable", "breathable", "GOTS Certified"]
+  },
+  role: "manufacturer",
+  location: "Shanghai, China"
+};
+
+    // Mock search results
+    const mockProductResults: SearchResult[] = [
     {
       id: "1",
       type: "product",
       name: "Organic Cotton T-Shirts",
-      company: "EcoFashion Co.",
-      description: "Premium organic cotton t-shirts with GOTS certification",
+      company: "EcoStyle Importers",
+      description: "Premium organic cotton t-shirts sourced from verified Chinese manufacturers.",
       price: "$8-15",
       moq: "500 pcs",
       location: "Jakarta, Indonesia",
@@ -114,8 +124,8 @@ export default function SearchPage() {
       id: "2",
       type: "product",
       name: "Bamboo Fiber T-Shirts",
-      company: "Green Textiles",
-      description: "Eco-friendly bamboo fiber t-shirts, soft and breathable",
+      company: "TropicalWear Import Co.",
+      description: "Eco-friendly bamboo t-shirts sourced from sustainable Chinese suppliers.",
       price: "$10-18",
       moq: "300 pcs",
       location: "Bandung, Indonesia",
@@ -125,15 +135,30 @@ export default function SearchPage() {
       relevanceScore: 88,
       tags: ["Bamboo", "Eco-friendly", "Breathable"],
     },
-  ]
+    {
+      id: "3",
+      type: "product",
+      name: "Traditional Handmade Batik Shirts",
+      company: "Batik Nusantara Imports",
+      description: "Authentic handmade batik shirts crafted by artisans in Yogyakarta, ideal for cultural fashion collections.",
+      price: "$15-25",
+      moq: "200 pcs",
+      location: "Yogyakarta, Indonesia",
+      rating: 4.9,
+      verified: true,
+      image: "/placeholder.svg?height=150&width=150",
+      relevanceScore: 93,
+      tags: ["Batik", "Handmade", "Traditional", "Artisan"],
+    }
+  ];
 
-  const mockPartnerResults: SearchResult[] = [
+    const mockPartnerResults: SearchResult[] = [
     {
       id: "1",
       type: "partner",
-      name: "Sustainable Textiles Indonesia",
-      description: "Leading manufacturer of organic and sustainable apparel",
-      location: "Jakarta, Indonesia",
+      name: "Sustainable Textiles China",
+      description: "Leading Chinese manufacturer of organic and sustainable apparel",
+      location: "Guangzhou, China",
       rating: 4.9,
       verified: true,
       relevanceScore: 94,
@@ -146,9 +171,9 @@ export default function SearchPage() {
     {
       id: "2",
       type: "partner",
-      name: "EcoFashion Manufacturing",
-      description: "Certified sustainable manufacturer with 15+ years experience",
-      location: "Surabaya, Indonesia",
+      name: "EcoFashion Manufacturing China",
+      description: "Certified Chinese sustainable manufacturer with 15+ years experience",
+      location: "Shenzhen, China",
       rating: 4.7,
       verified: true,
       relevanceScore: 89,
@@ -158,8 +183,25 @@ export default function SearchPage() {
       responseTime: "< 4 hours",
       products: 32,
     },
-  ]
+    {
+      id: "3",
+      type: "partner",
+      name: "Oriental Heritage Textile Co.",
+      description: "Chinese textile manufacturer offering batik-style printed fabrics inspired by Southeast Asian designs.",
+      location: "Hangzhou, China",
+      rating: 4.4,
+      verified: true,
+      relevanceScore: 85,
+      tags: ["Batik", "Printed", "Cultural"],
+      specialties: ["Digital Batik Prints", "Roller Printing", "Cotton Blends"],
+      employees: "100-120",
+      responseTime: "< 3 hours",
+      products: 34,
+    }
+  ];
 
+
+   
   const processNLPQuery = async (query: string): Promise<Message> => {
     // Simulate NLP processing
     const lowerQuery = query.toLowerCase()
@@ -210,11 +252,11 @@ export default function SearchPage() {
       if (lowerQuery.includes("supplier") || lowerQuery.includes("manufacturer")) {
         searchResults = mockPartnerResults
         responseContent =
-          "🇮🇩 Found Indonesian suppliers! Indonesia has excellent textile manufacturers with competitive pricing and quality."
+          "🇮🇩 Found Indonesian importers !"
       } else {
         searchResults = mockProductResults
         responseContent =
-          "🇮🇩 Here are products from Indonesian suppliers! Indonesia is known for high-quality textiles and sustainable practices."
+          "🇮🇩 Here are products requested by Indonesian importer!"
       }
       suggestions = ["Show shipping options", "Compare lead times", "Find certified suppliers", "Get bulk discounts"]
     } else if (lowerQuery.includes("price") || lowerQuery.includes("cheap") || lowerQuery.includes("budget")) {
@@ -235,6 +277,29 @@ export default function SearchPage() {
         "Filter by response time",
         "Show ready stock items",
       ]
+      } else if (lowerQuery.includes("indonesia") || lowerQuery.includes("jakarta") || lowerQuery.includes("bandung")) {
+        searchResults = mockProductResults
+        responseContent = "🇮🇩 These are importer product listings from Indonesia based on your interest."
+        suggestions = ["Show MOQ details", "Find matching suppliers in China", "Request quotation", "Contact importer"]
+      } else if (lowerQuery.includes("china") || lowerQuery.includes("guangzhou") || lowerQuery.includes("shenzhen")) {
+        searchResults = mockPartnerResults
+        responseContent = "🇨🇳 Here are verified Chinese manufacturers that match your query."
+        suggestions = ["View certifications", "Compare pricing", "Request sample", "View lead time"]
+      }else if (lowerQuery.includes("batik")) {
+            if (lowerQuery.includes("handmade") || lowerQuery.includes("traditional")) {
+              searchResults = mockProductResults.filter(p => p.tags.includes("Handmade"))
+              responseContent = "🎨 These are authentic handmade batik product requests from Indonesian importers."
+            } else if (lowerQuery.includes("printed") || lowerQuery.includes("manufacturer") || lowerQuery.includes("mass")) {
+              searchResults = mockPartnerResults.filter(p => p.tags.includes("Printed"))
+              responseContent = "🧵 Here are Chinese manufacturers offering printed batik-style textiles for large orders."
+            } else {
+              searchResults = [
+                ...mockProductResults.filter(p => p.tags.includes("Batik")),
+                ...mockPartnerResults.filter(p => p.tags.includes("Batik")),
+              ]
+              responseContent = "🧶 Here’s a variety of batik-related products and suppliers. Let me know if you prefer handmade or printed!"
+            }
+            suggestions = ["View handmade batik", "See printed batik fabrics", "Contact suppliers", "Request MOQ details"]
     } else {
       // General search
       searchResults = [...mockProductResults, ...mockPartnerResults]
@@ -252,6 +317,95 @@ export default function SearchPage() {
       filters,
     }
   }
+{/**
+  const processNLPQuery = async (query: string): Promise<Message> => {
+  const res = await fetch("/api/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query }),
+  });
+
+  const { intent, entities, message } = await res.json();
+  let searchResults: SearchResult[] = [];
+
+  // === Intent-based Routing ===
+  if (intent === "find_supplier") {
+    searchResults = mockPartnerResults.filter((result) =>
+      entities.some((entity: string) =>
+        result.description?.toLowerCase().includes(entity.toLowerCase())
+      )
+    );
+  } else if (intent === "find_product" || intent === "compare_price") {
+    searchResults = mockProductResults.filter((result) =>
+      entities.some((entity: string) =>
+        result.name?.toLowerCase().includes(entity.toLowerCase())
+      )
+    );
+  } else {
+    // Fallback: show a mix
+    searchResults = [...mockProductResults, ...mockPartnerResults];
+  }
+
+  return {
+    id: Date.now().toString(),
+    type: "assistant",
+    content: message,
+    timestamp: new Date(),
+    searchResults,
+    suggestions: ["Refine your search", "Filter by location", "Sort by rating"],
+    filters: [],
+  };
+}; */}
+{/**
+const processNLPQuery = async (query: string): Promise<Message> => {
+  const response = await fetch("/api/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query }),
+  });
+
+  const { intent, entities } = await response.json();
+
+  let searchResults: SearchResult[] = [];
+  let suggestions: string[] = [];
+  let filters: FilterSuggestion[] = [];
+
+  // 1. NLP Filtering
+  if (entities.length > 0) {
+    searchResults = mockProductResults.filter((result) =>
+      entities.some((entity: string) =>
+        result.name?.toLowerCase().includes(entity.toLowerCase())
+      )
+    );
+  }
+
+  // 2. Profile-Based Fallback
+  if (searchResults.length === 0 && currentUserProfile) {
+    searchResults = mockProductResults.filter((result) =>
+      result.tags.some((tag) =>
+        [...currentUserProfile.preferences.materials, ...currentUserProfile.preferences.customTags]
+          .map((p) => p.toLowerCase())
+          .includes(tag.toLowerCase())
+      )
+    );
+  }
+
+  // 3. Adaptive Fallback
+  if (searchResults.length === 0) {
+    searchResults = mockProductResults.sort((a, b) => b.rating - a.rating).slice(0, 5);
+  }
+
+  return {
+    id: Date.now().toString(),
+    type: "assistant",
+    timestamp: new Date(),
+    content: `🤖 Here's what I found for "${query}" (Intent: ${intent})`,
+    searchResults,
+    suggestions: ["Refine search", "Filter by material", "See top-rated"],
+    filters,
+  };
+};*/}
+
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return
@@ -348,11 +502,11 @@ export default function SearchPage() {
                             <p className="text-sm text-slate-600">{product.company}</p>
                             <p className="text-xs text-slate-500 mt-1">{product.description}</p>
                           </div>
-                          <Badge className="bg-emerald-600 text-white text-xs">{product.relevanceScore}% match</Badge>
+                          <Badge className="bg-blue-500 text-white text-xs">{product.relevanceScore}% match</Badge>
                         </div>
                         <div className="flex items-center justify-between mt-2">
                           <div className="flex items-center space-x-4 text-sm">
-                            <span className="text-emerald-600 font-medium">{product.price}</span>
+                            <span className="text-blue-600 font-medium">{product.price}</span>
                             <span className="text-slate-500">MOQ: {product.moq}</span>
                             <div className="flex items-center">
                               <MapPin className="h-3 w-3 mr-1" />
@@ -382,7 +536,7 @@ export default function SearchPage() {
                       </Button>
                       <Button
                         size="sm"
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                        className="flex-1 bg-rose-500 hover:bg-rose-600"
                         onClick={() => handleStartChat(product)}
                       >
                         <MessageSquare className="h-3 w-3 mr-1" />
@@ -441,7 +595,7 @@ export default function SearchPage() {
                         </div>
                       </div>
                       <div className="text-right space-y-2">
-                        <Badge className="bg-emerald-600 text-white text-xs mb-2">
+                        <Badge className="bg-blue-500 text-white text-xs mb-2">
                           {partner.relevanceScore}% match
                         </Badge>
                         <div className="flex items-center justify-end mb-2">
@@ -454,7 +608,7 @@ export default function SearchPage() {
                           </Button>
                           <Button
                             size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700"
+                            className="bg-rose-500 hover:bg-rose-600"
                             onClick={() => handleStartChat(partner)}
                           >
                             <MessageSquare className="h-3 w-3 mr-1" />
@@ -501,7 +655,7 @@ export default function SearchPage() {
                 >
                   <Avatar className="w-8 h-8">
                     <AvatarFallback
-                      className={message.type === "user" ? "bg-emerald-600 text-white" : "bg-purple-600 text-white"}
+                      className={message.type === "user" ? "bg-blue-500 text-white" : "bg-purple-600 text-white"}
                     >
                       {message.type === "user" ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                     </AvatarFallback>
@@ -509,7 +663,7 @@ export default function SearchPage() {
                   <div className={`flex-1 ${message.type === "user" ? "text-right" : ""}`}>
                     <div
                       className={`inline-block p-4 rounded-lg ${
-                        message.type === "user" ? "bg-emerald-600 text-white" : "bg-white border shadow-sm"
+                        message.type === "user" ? "bg-blue-500 text-white" : "bg-white border shadow-sm"
                       }`}
                     >
                       <p className="whitespace-pre-wrap">{message.content}</p>
@@ -543,7 +697,7 @@ export default function SearchPage() {
                       </div>
                     )}
 
-                    {/* Suggestions */}
+                    {/* Suggestions 
                     {message.suggestions && message.suggestions.length > 0 && (
                       <div className="mt-4">
                         <p className="text-sm font-medium text-slate-700 mb-2 flex items-center">
@@ -564,7 +718,7 @@ export default function SearchPage() {
                           ))}
                         </div>
                       </div>
-                    )}
+                    )}*/}
 
                     <p className="text-xs text-slate-500 mt-2">{message.timestamp.toLocaleTimeString()}</p>
                   </div>
@@ -605,7 +759,7 @@ export default function SearchPage() {
             <div className="flex space-x-2">
               <div className="flex-1">
                 <Input
-                  placeholder="Ask me anything... e.g., 'Find organic cotton suppliers in Indonesia under $15'"
+                  placeholder="Ask me anything... e.g., 'Find organic cotton requested in Indonesia under $15'"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
@@ -615,19 +769,15 @@ export default function SearchPage() {
               <Button
                 onClick={handleSendMessage}
                 disabled={!inputValue.trim() || isTyping}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-rose-500 hover:bg-rose-600"
               >
                 <Send className="h-4 w-4" />
               </Button>
             </div>
-            <p className="text-xs text-slate-500 mt-2">
-              💡 Tip: Use natural language like "Find sustainable t-shirt manufacturers in Southeast Asia with MOQ under
-              1000"
-            </p>
           </div>
         </div>
 
-        {/* Quick Actions Sidebar */}
+        {/* Quick Actions Sidebar 
         <div className="w-80 bg-white border-l p-4 space-y-4">
           <div>
             <h3 className="font-medium text-slate-800 mb-3">Quick Searches</h3>
@@ -635,12 +785,6 @@ export default function SearchPage() {
               {[
                 "Organic cotton suppliers",
                 "Sustainable manufacturers",
-                "Denim products under $20",
-                "Fast delivery partners",
-                "GOTS certified suppliers",
-                "Low MOQ products",
-                "Indonesian manufacturers",
-                "Premium quality fabrics",
               ].map((query) => (
                 <Button
                   key={query}
@@ -667,13 +811,9 @@ export default function SearchPage() {
                 <p className="font-medium mb-1">Partner Search:</p>
                 <p>"Find sustainable manufacturers with GOTS certification and fast response times"</p>
               </div>
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="font-medium mb-1">Comparison:</p>
-                <p>"Compare denim suppliers in Vietnam vs Indonesia for bulk orders"</p>
-              </div>
             </div>
           </div>
-        </div>
+        </div>*/}
       </div>
       {/* Chat Modal */}
       <Dialog open={showChatModal} onOpenChange={setShowChatModal}>
@@ -754,7 +894,7 @@ export default function SearchPage() {
                 <Button
                   onClick={handleSendChatMessage}
                   disabled={!chatMessage.trim() || isStartingChat}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                  className="flex-1 bg-rose-500 hover:bg-rose-600"
                 >
                   {isStartingChat ? (
                     <>

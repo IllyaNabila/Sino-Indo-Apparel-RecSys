@@ -166,7 +166,7 @@ export default function ChatPage() {
                 key={conversation.id}
                 onClick={() => setSelectedChat(conversation.id)}
                 className={`p-4 border-b cursor-pointer hover:bg-slate-50 ${
-                  selectedChat === conversation.id ? "bg-emerald-50 border-r-2 border-r-emerald-600" : ""
+                  selectedChat === conversation.id ? "bg-blue-50 border-r-2 border-r-blue-500" : ""
                 }`}
               >
                 <div className="flex items-center space-x-3">
@@ -182,7 +182,7 @@ export default function ChatPage() {
                       </AvatarFallback>
                     </Avatar>
                     {conversation.online && (
-                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white"></div>
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-400 rounded-full border-2 border-white"></div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -194,7 +194,7 @@ export default function ChatPage() {
                       <div className="flex items-center space-x-2">
                         <span className="text-xs text-slate-500">{conversation.timestamp}</span>
                         {conversation.unread > 0 && (
-                          <Badge className="bg-emerald-600 text-white text-xs px-2 py-1 rounded-full">
+                          <Badge className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
                             {conversation.unread}
                           </Badge>
                         )}
@@ -227,7 +227,7 @@ export default function ChatPage() {
                       </AvatarFallback>
                     </Avatar>
                     {currentChat.online && (
-                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white"></div>
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-400 rounded-full border-2 border-white"></div>
                     )}
                   </div>
                   <div>
@@ -260,17 +260,17 @@ export default function ChatPage() {
                   <div key={msg.id} className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}>
                     <div
                       className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        msg.sender === "me" ? "bg-emerald-600 text-white" : "bg-white border text-slate-800"
+                        msg.sender === "me" ? "bg-blue-500 text-white" : "bg-white border text-slate-800"
                       }`}
                     >
                       <p className="text-sm">{msg.content}</p>
                       <div className="flex items-center justify-between mt-2">
-                        <span className={`text-xs ${msg.sender === "me" ? "text-emerald-100" : "text-slate-500"}`}>
+                        <span className={`text-xs ${msg.sender === "me" ? "text-blue-50" : "text-slate-500"}`}>
                           {msg.timestamp}
                         </span>
                         {msg.sender === "me" && (
                           <div className="flex items-center space-x-1">
-                            <Clock className="h-3 w-3 text-emerald-100" />
+                            <Clock className="h-3 w-3 text-blue-50" />
                           </div>
                         )}
                       </div>
@@ -298,7 +298,7 @@ export default function ChatPage() {
                   <Button variant="outline" size="sm">
                     <Languages className="h-4 w-4" />
                   </Button>
-                  <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
+                  <Button type="submit" className="bg-rose-500 hover:bg-rose-600">
                     <Send className="h-4 w-4" />
                   </Button>
                 </form>
