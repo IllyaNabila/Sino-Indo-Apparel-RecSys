@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Link from "next/link"
 import { ArrowLeft, ArrowRight } from "lucide-react"
+import axios from 'axios';
 
 export default function BusinessDetailsPage() {
   const router = useRouter()
@@ -39,10 +40,16 @@ export default function BusinessDetailsPage() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     // In a real app, you would save the business details here
-    router.push(`/auth/license-upload`)
+    try {
+      const response = await axios.post('/api/users/business-details', formData)
+      console.log("Businsess registration success", response.data)
+      router.push(`/auth/license-upload`)
+    } catch (error: any) {
+      console.log("Business registration failed", error.message);
+    }
   }
 
   return (
@@ -78,7 +85,7 @@ export default function BusinessDetailsPage() {
                     required
                   />
                 </div>
-
+{/**
                 <div className="space-y-2">
                   <Label htmlFor="businessType">Business Type *</Label>
                   <Select
@@ -97,7 +104,7 @@ export default function BusinessDetailsPage() {
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
+                </div> */}
 
                 <div className="space-y-2">
                   <Label htmlFor="registrationNumber">Business Registration Number *</Label>
@@ -123,11 +130,6 @@ export default function BusinessDetailsPage() {
                     <SelectContent>
                       <SelectItem value="china">China</SelectItem>
                       <SelectItem value="indonesia">Indonesia</SelectItem>
-                      <SelectItem value="usa">United States</SelectItem>
-                      <SelectItem value="india">India</SelectItem>
-                      <SelectItem value="bangladesh">Bangladesh</SelectItem>
-                      <SelectItem value="vietnam">Vietnam</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -143,7 +145,7 @@ export default function BusinessDetailsPage() {
                     required
                   />
                 </div>
-
+                {/** Contact Person Name
                 <div className="space-y-2">
                   <Label htmlFor="contactPerson">Contact Person Name *</Label>
                   <Input
@@ -153,8 +155,8 @@ export default function BusinessDetailsPage() {
                     onChange={handleChange}
                     required
                   />
-                </div>
-
+                </div>*/}
+{/**
                 <div className="space-y-2">
                   <Label htmlFor="phoneNumber">Phone Number *</Label>
                   <Input
@@ -164,12 +166,12 @@ export default function BusinessDetailsPage() {
                     onChange={handleChange}
                     required
                   />
-                </div>
-
+                </div> */}
+{/**
                 <div className="space-y-2">
                   <Label htmlFor="website">Website (Optional)</Label>
                   <Input id="website" name="website" value={formData.website} onChange={handleChange} />
-                </div>
+                </div> */}
 
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="description">Business Description *</Label>
@@ -196,12 +198,12 @@ export default function BusinessDetailsPage() {
               </div>
             </form>
           </CardContent>
-          <CardFooter className="text-sm text-muted-foreground">
+ {/**         <CardFooter className="text-sm text-muted-foreground">
             <p>
               All fields marked with * are required. Your business information will be verified before you can connect
               with partners.
             </p>
-          </CardFooter>
+          </CardFooter> */}
         </Card>
       </div>
     </div>

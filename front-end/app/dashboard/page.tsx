@@ -1,14 +1,32 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BarChart, LineChart, PieChart } from "@/components/chart"
-import { BarChartIcon, LineChartIcon, PieChartIcon, Download, RefreshCw } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BarChart, LineChart, PieChart } from "@/components/chart";
+import {
+  BarChartIcon,
+  LineChartIcon,
+  PieChartIcon,
+  Download,
+  RefreshCw,
+} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Bell,
   Search,
@@ -19,8 +37,8 @@ import {
   Package,
   CheckCircle,
   ArrowUpRight,
-} from "lucide-react"
-import Link from "next/link"
+} from "lucide-react";
+import Link from "next/link";
 
 // Mock data for charts
 const TREND_DATA = {
@@ -45,10 +63,16 @@ const TREND_DATA = {
       borderColor: "rgb(236, 72, 153)",
     },
   ],
-}
+};
 
 const REGION_DATA = {
-  labels: ["North China", "East China", "South China", "West China", "Central China"],
+  labels: [
+    "North China",
+    "East China",
+    "South China",
+    "West China",
+    "Central China",
+  ],
   datasets: [
     {
       label: "Market Share",
@@ -70,7 +94,7 @@ const REGION_DATA = {
       borderWidth: 1,
     },
   ],
-}
+};
 
 const SEASONAL_DATA = {
   labels: ["Spring", "Summer", "Fall", "Winter"],
@@ -97,31 +121,70 @@ const SEASONAL_DATA = {
       tension: 0.3,
     },
   ],
-}
+};
 
 export default function DashboardPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCountry, setSelectedCountry] = useState("")
-  const [selectedSeason, setSelectedSeason] = useState("")
-  const [country, setCountry] = useState("all")
-  const [region, setRegion] = useState("all")
-  const [season, setSeason] = useState("all")
-  const [demographic, setDemographic] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState("");
+  const [selectedSeason, setSelectedSeason] = useState("");
+  const [country, setCountry] = useState("all");
+  const [region, setRegion] = useState("all");
+  const [season, setSeason] = useState("all");
+  const [demographic, setDemographic] = useState("all");
 
-  // Mock data
+ {/* // Mock data
   const stats = [
-    { title: "Active Connections", value: "24", change: "+12%", icon: Users, color: "text-blue-600" },
-    { title: "Product Views", value: "1,247", change: "+8%", icon: Package, color: "text-emerald-600" },
-    { title: "Messages", value: "18", change: "+3", icon: MessageSquare, color: "text-purple-600" },
-    { title: "Revenue", value: "$12,450", change: "+15%", icon: TrendingUp, color: "text-orange-600" },
-  ]
+    {
+      title: "Active Connections",
+      value: "24",
+      change: "+12%",
+      icon: Users,
+      color: "text-blue-600",
+    },
+    {
+      title: "Product Views",
+      value: "1,247",
+      change: "+8%",
+      icon: Package,
+      color: "text-emerald-600",
+    },
+    {
+      title: "Messages",
+      value: "18",
+      change: "+3",
+      icon: MessageSquare,
+      color: "text-purple-600",
+    },
+    {
+      title: "Revenue",
+      value: "$12,450",
+      change: "+15%",
+      icon: TrendingUp,
+      color: "text-orange-600",
+    },
+  ];*/}
 
   const recentActivity = [
-    { type: "message", content: "New message from Textile Co.", time: "2 min ago", status: "new" },
-    { type: "connection", content: "Fashion Import Ltd. viewed your profile", time: "1 hour ago", status: "viewed" },
-    { type: "product", content: "Cotton T-Shirt received 5 new inquiries", time: "3 hours ago", status: "inquiry" },
-    { type: "license", content: "Business license approved", time: "1 day ago", status: "approved" },
-  ]
+    {
+      type: "message",
+      content: "New message from Textile Co.",
+      time: "2 min ago",
+      status: "new",
+    },
+    //{ type: "connection", content: "Fashion Import Ltd. viewed your profile", time: "1 hour ago", status: "viewed" },
+    {
+      type: "product",
+      content: "Cotton T-Shirt received 5 new inquiries",
+      time: "3 hours ago",
+      status: "inquiry",
+    },
+    {
+      type: "license",
+      content: "Business license approved",
+      time: "1 day ago",
+      status: "approved",
+    },
+  ];
 
   const recommendedProducts = [
     {
@@ -129,29 +192,50 @@ export default function DashboardPage() {
       company: "EcoFashion Co.",
       price: "$15-25",
       moq: "500 pcs",
-      image: "/placeholder.svg?height=100&width=100",
+      image:
+        "https://www.chinaecofiber.com/uploads/image/20221026/17/organic-cotton-hoodie-7.jpg?height=100&width=100",
     },
     {
       name: "Denim Jackets",
       company: "Urban Wear Ltd.",
       price: "$20-35",
       moq: "200 pcs",
-      image: "/placeholder.svg?height=100&width=100",
+      image:
+        "https://th.bing.com/th/id/R.a0656793ded6d7582b23cfce193fdca6?rik=5T8kJ8HEQtczFA&riu=http%3a%2f%2fimage.sportsmansguide.com%2fadimgs%2fl%2f4%2f47385m2_ts.jpg&ehk=5Lr3HWdZPY5L1JgIgWRqPqADm%2bO7nKx1JBcRRBWDeog%3d&risl=&pid=ImgRaw&r=0?height=100&width=100",
     },
     {
       name: "Summer Dresses",
       company: "Seasonal Styles",
       price: "$12-18",
       moq: "300 pcs",
-      image: "/placeholder.svg?height=100&width=100",
+      image:
+        "https://kellyinthecity.s3.amazonaws.com/wp-content/uploads/2023/07/Summer-Dresses-Under-100_6.png?height=100&width=100",
     },
-  ]
+  ];
 
   const recommendedCompanies = [
-    { name: "Global Textiles Inc.", type: "Manufacturer", location: "Indonesia", verified: true, products: 45 },
-    { name: "Fashion Forward Co.", type: "Importer", location: "China", verified: true, products: 32 },
-    { name: "Sustainable Apparel", type: "Manufacturer", location: "Vietnam", verified: true, products: 28 },
-  ]
+    {
+      name: "Global Textiles Inc.",
+      type: "Manufacturer",
+      location: "Indonesia",
+      verified: true,
+      products: 45,
+    },
+    {
+      name: "Fashion Forward Co.",
+      type: "Importer",
+      location: "China",
+      verified: true,
+      products: 32,
+    },
+    {
+      name: "Sustainable Apparel",
+      type: "Manufacturer",
+      location: "Vietnam",
+      verified: true,
+      products: 28,
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -160,15 +244,17 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
-            <p className="text-slate-600">Welcome back! Here's what's happening with your business.</p>
+            <p className="text-slate-600">
+              Welcome back! Here's what's happening with your business.
+            </p>
           </div>
           <div className="flex items-center space-x-4">
-            <Button variant="outline" size="sm">
+            {/**<Button variant="outline" size="sm">
               <Bell className="h-4 w-4 mr-2" />
               Notifications
-            </Button>
+            </Button>*/}
             <Link href="/profile">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="bg-rose-500 hover:bg-rose-600 text-white hover:text-white ">
                 Profile
               </Button>
             </Link>
@@ -250,15 +336,28 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-50">
+                  <div
+                    key={index}
+                    className="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-50"
+                  >
                     <div className="flex-shrink-0">
-                      {activity.status === "new" && <MessageSquare className="h-5 w-5 text-blue-600" />}
-                      {activity.status === "viewed" && <Users className="h-5 w-5 text-purple-600" />}
-                      {activity.status === "inquiry" && <Package className="h-5 w-5 text-orange-600" />}
-                      {activity.status === "approved" && <CheckCircle className="h-5 w-5 text-emerald-600" />}
+                      {activity.status === "new" && (
+                        <MessageSquare className="h-5 w-5 text-blue-600" />
+                      )}
+                      {activity.status === "viewed" && (
+                        <Users className="h-5 w-5 text-purple-600" />
+                      )}
+                      {activity.status === "inquiry" && (
+                        <Package className="h-5 w-5 text-orange-600" />
+                      )}
+                      {activity.status === "approved" && (
+                        <CheckCircle className="h-5 w-5 text-emerald-600" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800">{activity.content}</p>
+                      <p className="text-sm font-medium text-slate-800">
+                        {activity.content}
+                      </p>
                       <p className="text-xs text-slate-500">{activity.time}</p>
                     </div>
                   </div>
@@ -279,15 +378,22 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {recommendedProducts.map((product, index) => (
-                  <div key={index} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50">
+                  <div
+                    key={index}
+                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50"
+                  >
                     <img
                       src={product.image || "/placeholder.svg"}
                       alt={product.name}
                       className="w-12 h-12 rounded-lg object-cover"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800">{product.name}</p>
-                      <p className="text-xs text-slate-500">{product.company}</p>
+                      <p className="text-sm font-medium text-slate-800">
+                        {product.name}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {product.company}
+                      </p>
                       <div className="flex items-center space-x-2 mt-1">
                         <Badge variant="secondary" className="text-xs">
                           {product.price}
@@ -312,13 +418,18 @@ export default function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Recommended Partners</CardTitle>
-                <CardDescription>Companies you might want to connect with</CardDescription>
+                <CardDescription>
+                  Companies you might want to connect with
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {recommendedCompanies.map((company, index) => (
-                  <div key={index} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50">
-                    <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
-                      <span className="text-emerald-600 font-semibold text-sm">
+                  <div
+                    key={index}
+                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50"
+                  >
+                    <div className="w-12 h-12 bg-rose-100 rounded-lg flex items-center justify-center">
+                      <span className="text-rose-500 font-semibold text-sm">
                         {company.name
                           .split(" ")
                           .map((word) => word[0])
@@ -328,13 +439,19 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2">
-                        <p className="text-sm font-medium text-slate-800">{company.name}</p>
-                        {company.verified && <CheckCircle className="h-4 w-4 text-emerald-600" />}
+                        <p className="text-sm font-medium text-slate-800">
+                          {company.name}
+                        </p>
+                        {company.verified && (
+                          <CheckCircle className="h-4 w-4 text-emerald-600" />
+                        )}
                       </div>
                       <p className="text-xs text-slate-500">
                         {company.type} • {company.location}
                       </p>
-                      <p className="text-xs text-slate-500">{company.products} products</p>
+                      <p className="text-xs text-slate-500">
+                        {company.products} products
+                      </p>
                     </div>
                     <ArrowUpRight className="h-4 w-4 text-slate-400" />
                   </div>
@@ -350,17 +467,22 @@ export default function DashboardPage() {
         {/* Clothing Consumer Preference Analytics */}
         <div className="py-6">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-2">Clothing Consumer Preferences</h2>
+            <h2 className="text-2xl font-bold mb-2">
+              Clothing Consumer Preferences
+            </h2>
             <p className="text-muted-foreground">
-              Analyze trending product types based on region, season, and demographics
+              Analyze trending product types based on region, season, and
+              demographics
             </p>
           </div>
 
-          {/* Filters */}
+          {/* Filters 
           <Card className="mb-8">
             <CardHeader className="pb-3">
               <CardTitle>Filters</CardTitle>
-              <CardDescription>Refine the analytics data based on your criteria</CardDescription>
+              <CardDescription>
+                Refine the analytics data based on your criteria
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -390,7 +512,9 @@ export default function DashboardPage() {
                       <SelectItem value="eastChina">East China</SelectItem>
                       <SelectItem value="southChina">South China</SelectItem>
                       <SelectItem value="westChina">West China</SelectItem>
-                      <SelectItem value="centralChina">Central China</SelectItem>
+                      <SelectItem value="centralChina">
+                        Central China
+                      </SelectItem>
                       <SelectItem value="jakarta">Jakarta</SelectItem>
                       <SelectItem value="westJava">West Java</SelectItem>
                       <SelectItem value="eastJava">East Java</SelectItem>
@@ -423,16 +547,20 @@ export default function DashboardPage() {
                     <SelectContent>
                       <SelectItem value="all">All Demographics</SelectItem>
                       <SelectItem value="youth">Youth (18-24)</SelectItem>
-                      <SelectItem value="youngAdult">Young Adult (25-34)</SelectItem>
+                      <SelectItem value="youngAdult">
+                        Young Adult (25-34)
+                      </SelectItem>
                       <SelectItem value="adult">Adult (35-44)</SelectItem>
-                      <SelectItem value="middleAge">Middle Age (45-54)</SelectItem>
+                      <SelectItem value="middleAge">
+                        Middle Age (45-54)
+                      </SelectItem>
                       <SelectItem value="senior">Senior (55+)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </Card>*/}
 
           {/* Charts */}
           <Tabs defaultValue="trends" className="w-full">
@@ -456,7 +584,8 @@ export default function DashboardPage() {
                 <CardHeader>
                   <CardTitle>Product Type Trends</CardTitle>
                   <CardDescription>
-                    Monthly trends of popular product types in {country === "all" ? "all countries" : country}
+                    Monthly trends of popular product types in{" "}
+                    {country === "all" ? "all countries" : country}
                     {region !== "all" ? `, ${region}` : ""}
                   </CardDescription>
                 </CardHeader>
@@ -501,7 +630,8 @@ export default function DashboardPage() {
                 <CardHeader>
                   <CardTitle>Regional Market Distribution</CardTitle>
                   <CardDescription>
-                    Market share by region in {country === "all" ? "all countries" : country}
+                    Market share by region in{" "}
+                    {country === "all" ? "all countries" : country}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="h-[400px]">
@@ -530,7 +660,8 @@ export default function DashboardPage() {
                 <CardHeader>
                   <CardTitle>Seasonal Product Patterns</CardTitle>
                   <CardDescription>
-                    How product popularity changes with seasons in {country === "all" ? "all countries" : country}
+                    How product popularity changes with seasons in{" "}
+                    {country === "all" ? "all countries" : country}
                     {region !== "all" ? `, ${region}` : ""}
                   </CardDescription>
                 </CardHeader>
@@ -576,7 +707,9 @@ export default function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Top Trending Products</CardTitle>
-                <CardDescription>Most popular products in the selected region</CardDescription>
+                <CardDescription>
+                  Most popular products in the selected region
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
@@ -617,7 +750,10 @@ export default function DashboardPage() {
                       <span>28%</span>
                     </div>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div className="bg-primary h-full rounded-full" style={{ width: "28%" }}></div>
+                      <div
+                        className="bg-primary h-full rounded-full"
+                        style={{ width: "28%" }}
+                      ></div>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -626,7 +762,10 @@ export default function DashboardPage() {
                       <span>35%</span>
                     </div>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div className="bg-primary h-full rounded-full" style={{ width: "35%" }}></div>
+                      <div
+                        className="bg-primary h-full rounded-full"
+                        style={{ width: "35%" }}
+                      ></div>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -635,7 +774,10 @@ export default function DashboardPage() {
                       <span>22%</span>
                     </div>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div className="bg-primary h-full rounded-full" style={{ width: "22%" }}></div>
+                      <div
+                        className="bg-primary h-full rounded-full"
+                        style={{ width: "22%" }}
+                      ></div>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -644,7 +786,10 @@ export default function DashboardPage() {
                       <span>10%</span>
                     </div>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div className="bg-primary h-full rounded-full" style={{ width: "10%" }}></div>
+                      <div
+                        className="bg-primary h-full rounded-full"
+                        style={{ width: "10%" }}
+                      ></div>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -653,7 +798,10 @@ export default function DashboardPage() {
                       <span>5%</span>
                     </div>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div className="bg-primary h-full rounded-full" style={{ width: "5%" }}></div>
+                      <div
+                        className="bg-primary h-full rounded-full"
+                        style={{ width: "5%" }}
+                      ></div>
                     </div>
                   </div>
                 </div>
@@ -663,7 +811,9 @@ export default function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Forecast Insights</CardTitle>
-                <CardDescription>Predicted trends for next season</CardDescription>
+                <CardDescription>
+                  Predicted trends for next season
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-4">
@@ -684,7 +834,9 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <p className="font-medium">Athleisure Expansion</p>
-                      <p className="text-sm text-muted-foreground">Continued growth in athletic-inspired casual wear</p>
+                      <p className="text-sm text-muted-foreground">
+                        Continued growth in athletic-inspired casual wear
+                      </p>
                     </div>
                   </li>
                   <li className="flex gap-3">
@@ -694,7 +846,8 @@ export default function DashboardPage() {
                     <div>
                       <p className="font-medium">Traditional Influences</p>
                       <p className="text-sm text-muted-foreground">
-                        Rising interest in designs with cultural heritage elements
+                        Rising interest in designs with cultural heritage
+                        elements
                       </p>
                     </div>
                   </li>
@@ -705,5 +858,5 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

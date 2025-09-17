@@ -255,7 +255,7 @@ export default function FeedbackPage() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-emerald-600 hover:bg-emerald-700"
+                  className="w-full bg-rose-500 hover:bg-rose-600"
                   disabled={!feedbackType || !subject || !content || rating === 0}
                 >
                   <Send className="h-4 w-4 mr-2" />
@@ -265,7 +265,7 @@ export default function FeedbackPage() {
             </CardContent>
           </Card>
 
-          {/* Previous Feedback */}
+          {/* Previous Feedback 
           <Card>
             <CardHeader>
               <CardTitle>Your Previous Feedback</CardTitle>
@@ -313,10 +313,10 @@ export default function FeedbackPage() {
                 )}
               </div>
             </CardContent>
-          </Card>
+          </Card>*/}
         </div>
 
-        {/* Feedback Guidelines */}
+        {/* Feedback Guidelines 
         <Card className="mt-6">
           <CardHeader>
             <CardTitle>Feedback Guidelines</CardTitle>
@@ -362,7 +362,7 @@ export default function FeedbackPage() {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card>*/}
       </div>
     </div>
   )

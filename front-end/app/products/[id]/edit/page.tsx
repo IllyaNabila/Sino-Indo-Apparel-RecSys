@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Upload, X, Plus, Save, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
+import axios from "axios"
 
 interface ProductFormData {
   name: string
@@ -91,26 +92,23 @@ export default function EditProductPage() {
     const loadProduct = async () => {
       try {
         // Simulate API call to load product data
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
+        //await new Promise((resolve) => setTimeout(resolve, 1000))
+        const { data } = await axios.get(`/api/products?id=${productId}`);
+        console.log("data edit", data);
         // Mock product data - in real app, this would come from API
         const mockProduct = {
           id: productId,
-          name: "Organic Cotton T-Shirts",
-          category: "T-Shirts",
-          material: "Organic Cotton",
-          moq: "500",
-          priceMin: "8",
-          priceMax: "15",
-          description: "Premium organic cotton t-shirts with GOTS certification. Soft, comfortable, and sustainable.",
-          colors: ["White", "Black", "Navy", "Gray"],
-          sizes: ["S", "M", "L", "XL", "XXL"],
-          leadTime: "2-3 weeks",
-          images: [
-            "/placeholder.svg?height=200&width=200",
-            "/placeholder.svg?height=200&width=200",
-            "/placeholder.svg?height=200&width=200",
-          ],
+          name: data.name,
+          category: data.category,
+          material: data.material,
+          moq: data.moq,
+          priceMin: data.priceMin,
+          priceMax: data.priceMax,
+          description: data.description,
+          colors: data.colors,
+          sizes: data.sizes,
+          leadTime: data.leadTime,
+          images: data.images,
         }
 
         setFormData(mockProduct)
@@ -465,7 +463,7 @@ export default function EditProductPage() {
                   {formData.images.map((image, index) => (
                     <div key={index} className="relative group">
                       <img
-                        src={typeof image === "string" ? image : URL.createObjectURL(image)}
+                        src={typeof image === "string" ? `data:image/png;base64,${image}` : URL.createObjectURL(image)}
                         alt={`Product ${index + 1}`}
                         className="w-full h-32 object-cover rounded-lg border"
                       />
