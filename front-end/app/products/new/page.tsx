@@ -434,25 +434,12 @@ export default function NewProductPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Image Upload */}
-              <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
-                <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <div className="space-y-2">
-                  <Label htmlFor="images" className="cursor-pointer">
-                    <Button type="button" variant="outline">
-                      Choose Images
-                    </Button>
-                  </Label>
-                  <Input
-                    id="images"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={handleImageUpload}
-                  />
-                  <p className="text-sm text-slate-500">PNG, JPG up to 5MB each. Multiple images allowed.</p>
-                </div>
-              </div>
+              <Label htmlFor="images" className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg p-6 text-center cursor-pointer hover:bg-slate-50">
+                <Upload className="h-12 w-12 text-slate-400 mb-4"/>
+                <span className="text-sm font-medium text-slate-700">Click to upload or drag and drop</span>
+                <p className="text-xs text-slate-500">PNG, JPG up to 5MB each. Multiple images allowed.</p>
+                <Input id="images" type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload}/>
+              </Label>
 {/***/}
               {errors.images && (
                 <p className="text-sm text-red-500 flex items-center">
