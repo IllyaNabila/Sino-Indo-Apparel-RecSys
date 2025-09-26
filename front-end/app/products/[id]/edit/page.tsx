@@ -26,7 +26,7 @@ interface ProductFormData {
   colors: string[]
   sizes: string[]
   leadTime: string
-  images: (File | string)[] // Can be File objects or URLs
+  images: File[] // Can be File objects or URLs
 }
 
 export default function EditProductPage() {
@@ -168,16 +168,32 @@ export default function EditProductPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    if (files.length > 0) {
-      setFormData({ ...formData, images: [...formData.images, ...files] })
-      // Clear image error if images are added
-      if (errors.images) {
-        setErrors({ ...errors, images: "" })
+  const convertToBase64 = (file: File): Promise<string> =>{
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+
+    reader.onload = () => {
+      const base64String = reader.result?.toString().split(",")[1];
+      if (base64String) resolve(base64String);
+      else reject("Conversion failed");
+    };
+
+    reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      e.preventDefault()
+      const files = Array.from(e.target.files || [])
+      if (files.length > 0) {
+        setFormData({ ...formData, images: [...formData.images, ...files] })
+        // Clear image error if images are added
+        if (errors.images) {
+          setErrors({ ...errors, images: "" })
+        }
       }
-    }
-  }
+    };
 
   const removeImage = (index: number) => {
     const newImages = formData.images.filter((_, i) => i !== index)
@@ -214,22 +230,38 @@ export default function EditProductPage() {
     }
 
     setIsSubmitting(true)
+    console.log("Form data: ", formData);
+
+    // Convert all images to base64
+      const base64Images = await Promise.all(
+        formData.images.map(async (fileOrString) => {
+          if (typeof fileOrString === 'string') {
+            return fileOrString;
+          }
+          return convertToBase64(fileOrString as File)
+        })
+      );
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const res = await axios.patch(`/api/products?id=${productId}`, {
+          name: formData.name,
+          category: formData.category,
+          material: formData.material,
+          moq: formData.moq,
+          priceMin: formData.priceMin,
+          priceMax: formData.priceMax,
+          description: formData.description,
+          colors: formData.colors,
+          sizes: formData.sizes,
+          leadTime: formData.leadTime,
+          images: base64Images,
+      });
 
-      const productData = {
-        ...formData,
-        price: `$${formData.priceMin}-${formData.priceMax}`,
-        moq: `${formData.moq} pcs`,
-        id: productId,
+      console.log("Updating product:", formData)
+
+      if (res.status === 200) {
+        router.push("/products");
       }
-
-      console.log("Updating product:", productData)
-
-      // Redirect to products page
-      router.push("/products")
     } catch (error) {
       console.error("Error updating product:", error)
     } finally {
@@ -533,7 +565,10 @@ export default function EditProductPage() {
                   <Input
                     placeholder="Add color"
                     value={newColor}
-                    onChange={(e) => setNewColor(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const capitalized = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+                      setNewColor(capitalized)}}
                     onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addColor())}
                   />
                   <Button type="button" onClick={addColor} variant="outline">
@@ -559,7 +594,7 @@ export default function EditProductPage() {
                   <Input
                     placeholder="Add size (e.g., S, M, L, XL)"
                     value={newSize}
-                    onChange={(e) => setNewSize(e.target.value)}
+                    onChange={(e) => setNewSize(e.target.value.toUpperCase())}
                     onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSize())}
                   />
                   <Button type="button" onClick={addSize} variant="outline">
