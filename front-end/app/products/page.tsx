@@ -17,6 +17,21 @@ import {
 } from "@/components/ui/dialog"
 import axios from "axios"
 
+interface ProductData {
+  id: string
+  name: string
+  category: string
+  material: string
+  moq: string
+  priceMin: string
+  priceMax: string
+  description: string
+  colors: string[]
+  sizes: string[]
+  leadTime: string
+  images: File[] // Can be File objects or URLs
+}
+
 type ProductUI = {
   id: string,
   name: string;
@@ -95,6 +110,21 @@ export default function ProductsPage() {
   });
   
   const [productDetails, setProductDetails] = useState<any[]>([]);
+
+  const initialProductState: ProductData = {
+    id: "",
+    name: "",
+    category: "",
+    material: "",
+    moq: "",
+    priceMin: "",
+    priceMax: "",
+    description: "",
+    colors: [],
+    sizes: [],
+    leadTime: "",
+    images: [],
+  };
   
   const filteredProducts = productDetails.filter(
     (product) =>
@@ -103,6 +133,38 @@ export default function ProductsPage() {
       product.material.toLowerCase().includes(searchQuery.toLowerCase()),
   );
   
+  const [displayProduct, setDisplayProduct] = useState(false);
+  const [displayProductDetails, setDisplayProductDetails] = useState<ProductData>(initialProductState);
+
+  const resetProductDetails = () => {
+    setDisplayProductDetails(initialProductState);
+  };
+
+  const handleDisplayProduct = async (productId: string) =>{
+    setDisplayProduct(true);
+    resetProductDetails();
+    try {
+      const {data} = await axios.get(`/api/products?id=${productId}`);
+      const mockProduct = {
+          id: productId,
+          name: data.name,
+          category: data.category,
+          material: data.material,
+          moq: data.moq,
+          priceMin: data.priceMin,
+          priceMax: data.priceMax,
+          description: data.description,
+          colors: data.colors,
+          sizes: data.sizes,
+          leadTime: data.leadTime,
+          images: data.images,
+        }
+      setDisplayProductDetails(mockProduct); 
+    } catch (error: any) {
+      console.error("Error loading product:", error)
+    }
+  }
+
   // Add state for delete confirmation dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [productToDelete, setProductToDelete] = useState<number | null>(null)
@@ -136,17 +198,21 @@ export default function ProductsPage() {
     }
   }
 
+  const fetchProducts = async () => {
+    try {
+      const { data } = await axios.get("/api/products");
+      const mapped = data.map(toProductUI);
+      console.log("data", data);
+      setProductDetails(mapped);
+      setLoading(false);
+    } catch (err: any) {  
+      console.error("Error fetching product:", err.response?.data?.error || err.message);
+      setLoading(false);
+    }
+  };
+
   useEffect(() =>{
-    (async () => {
-      try {
-        const { data } = await axios.get("/api/products");
-        const mapped = data.map(toProductUI);
-        console.log("data", data);
-        setProductDetails(mapped);
-      } catch (err: any) {  
-        console.error("Error fetching product:", err.response?.data?.error || err.message);
-      }
-    })();
+    fetchProducts();
   }, []);
   
   console.log("fetchproducts", productDetails);
@@ -294,7 +360,7 @@ export default function ProductsPage() {
                   </div>*/}
 
                   <div className="flex space-x-2 pt-2">
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => handleDisplayProduct(product.id)}>
                       <Eye className="h-3 w-3 mr-1" />
                       View
                     </Button>
@@ -350,6 +416,112 @@ export default function ProductsPage() {
             <Button variant="destructive" onClick={confirmDelete}>
               Delete Product
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={displayProduct} onOpenChange={setDisplayProduct}>
+        <DialogContent className="overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">
+        {displayProductDetails.name || "Unnamed Product"}
+            </DialogTitle>
+            <DialogDescription>
+              View detailed product information below.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Body */}
+          <div className="space-y-4 mt-2 overflow-y-auto max-h-[60vh]">
+            <div>
+              <p className="text-sm text-muted-foreground">Description</p>
+              <p className="text-base">{displayProductDetails.description || "-"}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Category</p>
+                <p className="font-medium">{displayProductDetails.category || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Material</p>
+                <p className="font-medium">{displayProductDetails.material || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">MOQ</p>
+                <p className="font-medium">{displayProductDetails.moq || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Lead Time</p>
+                <p className="font-medium">{displayProductDetails.leadTime || "-"}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Price Min</p>
+                <p className="font-medium">RM {displayProductDetails.priceMin || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Price Max</p>
+                <p className="font-medium">RM {displayProductDetails.priceMax || "-"}</p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm text-muted-foreground">Colors</p>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {displayProductDetails.colors?.length > 0 ? (
+                  displayProductDetails.colors.map((c, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-1 text-sm rounded bg-gray-100"
+                    >
+                      {c}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm">No colors specified</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm text-muted-foreground">Sizes</p>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {displayProductDetails.sizes?.length > 0 ? (
+                  displayProductDetails.sizes.map((s, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-1 text-sm rounded bg-gray-100"
+                    >
+                      {s}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm">No sizes specified</p>
+                )}
+              </div>
+            </div>
+
+            {/* Images */}
+            {displayProductDetails.images?.length > 0 && (
+              <div>
+                <p className="text-sm text-muted-foreground">Images</p>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {displayProductDetails.images.map((img, i) => (
+                    <img
+                      key={i}
+                      src={typeof img === "string" ? `data:image/png;base64,${img}` : URL.createObjectURL(img)}
+                      alt={`Product image ${i + 1}`}
+                      className="rounded-lg border object-cover h-32 w-full"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+
           </DialogFooter>
         </DialogContent>
       </Dialog>
