@@ -509,7 +509,11 @@ export default function NewProductPage() {
                   <Input
                     placeholder="Add color"
                     value={newColor}
-                    onChange={(e) => setNewColor(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const capitalized = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+                      setNewColor(capitalized);
+                    }}
                     onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addColor())}
                   />
                   <Button type="button" onClick={addColor} variant="outline">
@@ -535,7 +539,7 @@ export default function NewProductPage() {
                   <Input
                     placeholder="Add size (e.g., S, M, L, XL)"
                     value={newSize}
-                    onChange={(e) => setNewSize(e.target.value)}
+                    onChange={(e) => setNewSize(e.target.value.toUpperCase())}
                     onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSize())}
                   />
                   <Button type="button" onClick={addSize} variant="outline">
