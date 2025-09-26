@@ -113,13 +113,26 @@ export default function ProductsPage() {
     setDeleteDialogOpen(true)
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (productToDelete) {
       // Remove product from list
       console.log("Deleting product:", productToDelete)
-      // In real app, this would be an API call
-      setDeleteDialogOpen(false)
-      setProductToDelete(null)
+      try {
+        const res = await axios.delete(`/api/products?id=${productToDelete}`);
+
+        if (res.status === 200) {
+
+          setDeleteDialogOpen(false)
+          setProductToDelete(null)
+          
+          console.log("Product deleted:", res.data);
+          fetchProducts();
+        } else {
+          console.error("Failed to delete product:", res.data)
+        }
+      } catch (err: any) {
+        console.error("Error deleting product:", err);
+      }
     }
   }
 
