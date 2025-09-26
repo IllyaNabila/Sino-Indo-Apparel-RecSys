@@ -64,19 +64,12 @@ export async function GET(req: NextRequest) {
                 return NextResponse.json({ error: "Product not found"}, {status: 404});
             }
             
-            return NextResponse.json(product);
+            return NextResponse.json(product, { status: 200 });
         } else {
             // Fetch all products for the business
             const products = await Product.find({businessId});
-            if (!products || products.length === 0) {
-                console.log("error");
-                return NextResponse.json(   
-                    { error: "Product not found"},
-                    { status: 404}
-                );
-            }
-            console.log("products");
-            return NextResponse.json(products);
+            
+            return NextResponse.json(products, { status: 200 });
         }
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, {status: 500});
