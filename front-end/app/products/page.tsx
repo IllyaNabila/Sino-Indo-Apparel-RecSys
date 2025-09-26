@@ -45,7 +45,7 @@ type ProductUI = {
 
 export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState("")
-
+  const [loading, setLoading] = useState(true);
   // Mock product data
   const mockProducts = [
     {
@@ -385,7 +385,13 @@ export default function ProductsPage() {
           ))}
         </div>
 
-        {filteredProducts.length === 0 && (
+        {loading && (
+          <div className="flex items-center justify-center py-40">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          </div>
+        )}
+
+        {!loading && filteredProducts.length === 0 && (
           <div className="text-center py-12">
             <Package className="h-12 w-12 text-slate-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-slate-800 mb-2">No products found</h3>
