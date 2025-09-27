@@ -511,7 +511,7 @@ export default function EditProductPage() {
                 </div>
               )}
 
-              {/* Image Upload */}
+              {/* Image Upload 
               <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
                 <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
                 <div className="space-y-2">
@@ -530,7 +530,26 @@ export default function EditProductPage() {
                   />
                   <p className="text-sm text-slate-500">PNG, JPG up to 5MB each. Multiple images allowed.</p>
                 </div>
-              </div>
+              </div>*/}
+              <Label
+                htmlFor="images"
+                className="flex
+                          flex-col
+                          items-center
+                          justify-center
+                          border-2
+                          border-dashed
+                          border-slate-300
+                          rounded-lg
+                          p-6
+                          text-center
+                          cursor-pointer
+                          hover:bg-slate-50">
+                <Upload className="h-12 w-12 text-slate-400 mb-4"></Upload>
+                <span className="text-sm font-medium text-slate-700">Click to upload or drag and drop</span>
+                <p className="text-xs text-slate-500">PNG, JPG up to 5MB each. Multiple images allowed</p>
+                <Input id="images" type="file" accept="images/*" multiple className="hidden" onChange={handleImageUpload}></Input>
+              </Label>
 
               {errors.images && (
                 <p className="text-sm text-red-500 flex items-center">
