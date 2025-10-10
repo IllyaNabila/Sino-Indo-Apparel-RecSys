@@ -3,11 +3,11 @@ import mongoose from "mongoose";
 const membershipSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Business",
+    ref: "businesses",
   },
   conversationId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Conversation",
+    ref: "conversations",
   },
   lastReadAt: {
     type: Date,

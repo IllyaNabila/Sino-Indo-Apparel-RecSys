@@ -26,7 +26,7 @@ const licenseSchema = new mongoose.Schema({
     },
     businessId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Business',
+        ref: 'businesses',
     },
 }, {
   timestamps: true,

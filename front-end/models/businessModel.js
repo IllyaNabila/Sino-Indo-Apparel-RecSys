@@ -16,7 +16,7 @@ const businessSchema = new mongoose.Schema({
   },
   submittedBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: "users",
   },
 }, {
   timestamps: true,

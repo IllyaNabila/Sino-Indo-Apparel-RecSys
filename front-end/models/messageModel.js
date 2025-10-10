@@ -5,17 +5,17 @@ const messageSchema = new mongoose.Schema(
   {
     conversationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Conversation",
+      ref: "conversations",
       required: true,
     },
     senderId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Business",
+      ref: "businesses",
       required: true,
     },
     receiverId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Business",
+      ref: "businesses",
       required: true,
     },
     content: { type: String, required: true },

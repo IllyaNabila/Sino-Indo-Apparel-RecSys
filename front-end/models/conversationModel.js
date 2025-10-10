@@ -4,11 +4,11 @@ const conversationSchema = new mongoose.Schema(
   {
     participants: {
       type: [mongoose.Schema.Types.ObjectId],
-      ref: "Business",
+      ref: "businesses",
     },
     lastMessageId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Message",
+      ref: "messages",
     },
     lastMessageAt: Date,
   },
