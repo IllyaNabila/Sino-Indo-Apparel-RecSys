@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-
+import { useBusiness } from "@/context/BusinessContext";
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react"
 import axios from 'axios';
 
 export default function BusinessDetailsPage() {
+  const { businessId, companyName, setBusinessId, setCompanyName } = useBusiness();
   const router = useRouter()
   const searchParams = useSearchParams()
   const role = searchParams.get("role") || "importer"
@@ -45,12 +46,16 @@ export default function BusinessDetailsPage() {
     // In a real app, you would save the business details here
     try {
       const response = await axios.post('/api/users/business-details', formData)
-      console.log("Businsess registration success", response.data)
-      router.push(`/auth/license-upload`)
+      console.log("Businsess registration success", response.data);
+      setBusinessId(response.data.savedBusiness?._id);
+      setCompanyName(response.data.savedBusiness?.companyName);
+      router.push(`/auth/license-upload`);
     } catch (error: any) {
       console.log("Business registration failed", error.message);
     }
   }
+
+  console.log(businessId);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">

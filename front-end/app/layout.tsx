@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import ClientLayoutWrapper from "@/components/client-layout-wrapper" // Declare the variable here
+import { BusinessProvider } from "@/context/BusinessContext";
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -36,7 +37,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <LayoutContent>{children}</LayoutContent>
+          <BusinessProvider>
+            <LayoutContent>{children}</LayoutContent>
+          </BusinessProvider>
         </ThemeProvider>
       </body>
     </html>

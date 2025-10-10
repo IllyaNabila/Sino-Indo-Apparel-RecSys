@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-
+import { useBusiness } from "@/context/BusinessContext";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 
 export default function LoginPage() {
+  const { businessId, companyName, setBusinessId, setCompanyName } = useBusiness();
   const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
@@ -35,6 +36,8 @@ export default function LoginPage() {
       const response = await axios.post("/api/auth/login", formData);
       console.log("Login success", response.data);
       toast.success("Login success");
+      setBusinessId(response.data.businessId);
+      setCompanyName(response.data.companyName);
       router.push("/dashboard");
     } catch (error: any) {
       console.log("Login failed", error.message);
