@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState } from "react"
+import type React from "react";
+import { useBusiness } from "@/context/BusinessContext";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Send, Search, Languages, MoreVertical, Phone, Video, CheckCircle, Clock } from "lucide-react"
 
 export default function ChatPage() {
+  const { businessId, companyName } = useBusiness();
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [selectedChat, setSelectedChat] = useState(1)
   const [message, setMessage] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
@@ -124,8 +126,19 @@ export default function ChatPage() {
   }
 
   const filteredConversations = conversations.filter((conv) =>
-    conv.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+    conv.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  console.log("conversations details", conversationsDetails);
+  console.log("messages details", messages);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -282,6 +295,7 @@ export default function ChatPage() {
                     </div>
                   </div>
                 ))}
+                <div ref={messagesEndRef}></div>
               </div>
 
               {/* Message Input */}
