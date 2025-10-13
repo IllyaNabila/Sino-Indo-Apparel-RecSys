@@ -18,7 +18,7 @@ import {
   Clock,
 } from "lucide-react";
 import axios from "axios";
-import { socket } from "@/lib/socket";
+//import { socket } from "@/lib/socket";
 import { printTreeView } from "next/dist/build/utils";
 
 type ConversationUI = {
@@ -35,12 +35,13 @@ type ConversationUI = {
 type MessagesUI = {
   id: string;
   sender: string;
+  receiverId: string;
   content: string;
   timestamp: string;
 };
 
 export default function ChatPage() {
-  const { businessId, companyName } = useBusiness();
+  const { businessId, companyName, socket } = useBusiness();
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [selectedChat, setSelectedChat] = useState(null);
   const [message, setMessage] = useState("");
@@ -81,6 +82,7 @@ export default function ChatPage() {
       typeof m.senderId === "object"
         ? m.senderId._id
         : m.senderId ?? m.sender ?? "",
+    receiverId: m.receiverId ?? "",
     content: m.content ?? "",
     timestamp: new Date(m.createdAt ?? m.timestamp).toLocaleString(undefined, {
       year: "numeric",
@@ -107,7 +109,9 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!selectedChat) return;
-    socket.emit("joinConversation", selectedChat);
+    if (socket) {
+      socket.emit("joinConversation", selectedChat);
+    }
     const fetchMessages = async () => {
       try {
         const { data } = await axios.get(`/api/chat/${selectedChat}/messages`);
@@ -152,14 +156,18 @@ export default function ChatPage() {
       }
     };
 
-    socket.on("receiveMessage", handleReceiveMessage);
+    if (socket) {
+      socket.on("receiveMessage", handleReceiveMessage);
+    }
     return () => {
-      socket.off("receiveMessage", handleReceiveMessage);
+      if (socket) {
+        socket.off("receiveMessage", handleReceiveMessage);
+      }
     };
   }, [selectedChat]);
 useEffect(() => {
   console.log("Selected Chat:", selectedChat);
-}, [selectedChat]);
+}, [selectedChat, socket]);
   // Mock chat data
   const mockConversations = [
     {
@@ -274,6 +282,7 @@ useEffect(() => {
     const msg: MessagesUI = {
       id: generateObjectId(),
       sender: businessId,
+      receiverId: currentChat.partnerId,
       content: message,
       timestamp: new Date().toLocaleString(undefined, {
         year: "numeric",
@@ -293,7 +302,9 @@ useEffect(() => {
       });
       const msg = toMessageUI(response.data);
       console.log("msg", msg);
-      socket.emit("sendMessage", { selectedChat, msg });
+      if (socket) {
+        socket.emit("sendMessage", { selectedChat, msg });
+      }
       fetchConversation();
     } catch (error) {
       console.error("Error sending message:", error);

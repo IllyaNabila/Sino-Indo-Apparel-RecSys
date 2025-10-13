@@ -18,6 +18,18 @@ const io = new Server(server, {
 
 io.on("connection", (socket) => {
     console.log("Connected:", socket.id);
+   // const token = socket.handshake.auth.token;
+   // const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
+   // const userId = decoded.businessId;
+
+    {/**if(userId) {
+        socket.join(userId);
+    };*/}
+
+    socket.on("personalChannel", (businessId) =>{
+        socket.join(businessId);
+        console.log(`Socket ${socket.id} joined personal channel: ${businessId}`);
+    });
 
     socket.on("joinConversation", (selectedChat) =>{
         socket.join(selectedChat);
@@ -26,8 +38,9 @@ io.on("connection", (socket) => {
     
     socket.on("sendMessage", (data) => {
         console.log("Message", data);
-        const { selectedChat } = data;
+        const { selectedChat, msg } = data;
         io.to(selectedChat).emit("receiveMessage", data);
+        io.to(msg.receiverId).emit("newNotification", data);
     });
 
     socket.on("disconnect", () => {
