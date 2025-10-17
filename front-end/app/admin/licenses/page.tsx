@@ -2,7 +2,7 @@
 
 import { Label } from "@/components/ui/label"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -32,6 +32,7 @@ import {
   Mail,
   ArrowUpDown,
 } from "lucide-react"
+import axios from "axios"
 
 // License submission type
 interface LicenseSubmission {
@@ -123,6 +124,8 @@ export default function AdminLicensesPage() {
     },
   ])
 
+  const [licenseSubmission, setLicenseSubmission] = useState<any[]>([])
+  const [verificationStatus, setVerificationStatus] = useState("pending");
   // State for search and filters
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -274,6 +277,23 @@ export default function AdminLicensesPage() {
     }
   }
 
+  useEffect(() => {
+    const fetchLicense = async () => {
+      try {
+        console.log(verificationStatus)
+        const response = await axios.get(`/api/admin/licenses?status=${verificationStatus}`);
+        const licenses = response.data.data;
+        setLicenseSubmission(licenses);
+        console.log(response);
+        
+      } catch (error: any) {
+        console.error("Fetch license failed:", error.response?.data || error.message);
+      }
+    }
+    fetchLicense();
+  }, [verificationStatus]);
+  
+  console.log(licenseSubmission);
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -301,9 +321,14 @@ export default function AdminLicensesPage() {
       </header>
 
       <div className="p-6">
-        <Tabs defaultValue="pending" className="space-y-6">
+        <Tabs
+          defaultValue="pending"
+          value={verificationStatus}
+          onValueChange={(value) => setVerificationStatus(value)}
+          className="space-y-6"
+        >
           <TabsList>
-            <TabsTrigger value="pending">Pending Review ({pendingCount})</TabsTrigger>
+            <TabsTrigger value="pending">Pending Review ({pendingCount}) </TabsTrigger>
             <TabsTrigger value="all">All Submissions</TabsTrigger>
             <TabsTrigger value="approved">Approved</TabsTrigger>
             <TabsTrigger value="rejected">Rejected</TabsTrigger>
