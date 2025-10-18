@@ -35,7 +35,7 @@ import {
 import axios from "axios"
 
 // License submission type
-interface LicenseSubmission {
+interface LicenseSubmissions {
   id: number
   companyName: string
   companyEmail: string
@@ -52,9 +52,42 @@ interface LicenseSubmission {
   country: string
 }
 
+interface LicenseSubmission {
+  id: number
+  companyName: string
+  companyEmail: string
+  submissionDate: string
+  documentType: string
+  status: "pending" | "approved" | "rejected"
+  documentUrl: string
+  rejectionReason?: string
+  approvedDate?: string
+  priority: "normal" | "high" | "low"
+  notes?: string
+  submitterName: string
+  businessType: string
+  country: string
+  businessId: Business
+}
+
+type Business = {
+  _id: string,
+  companyName: string,
+  businessType: string,
+  registrationNumber: string,
+  country: string,
+  address: string,
+  phoneNumber: string,
+  website: string,
+  description: string,
+  role: string,
+  verified: boolean,
+  submittedBy: string,
+}
+
 export default function AdminLicensesPage() {
   // Mock data for license submissions
-  const [licenseSubmissions, setLicenseSubmissions] = useState<LicenseSubmission[]>([
+  const [licenseSubmissions, setLicenseSubmissions] = useState<LicenseSubmissions[]>([
     {
       id: 1,
       companyName: "Global Fashion Co.",
@@ -124,7 +157,7 @@ export default function AdminLicensesPage() {
     },
   ])
 
-  const [licenseSubmission, setLicenseSubmission] = useState<any[]>([])
+  const [licenseSubmission, setLicenseSubmission] = useState<LicenseSubmission[]>([])
   const [verificationStatus, setVerificationStatus] = useState("pending");
   // State for search and filters
   const [searchQuery, setSearchQuery] = useState("")
@@ -140,6 +173,8 @@ export default function AdminLicensesPage() {
   // State for document preview dialog
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false)
   const [previewSubmission, setPreviewSubmission] = useState<LicenseSubmission | null>(null)
+
+ 
 
   // Filter and sort submissions
   const filteredSubmissions = licenseSubmissions
