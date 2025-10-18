@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 connect();
 
 export async function GET(request: NextRequest) {
+  await connect(); //ensures both connection + model registration
   try {
     const verificationStatus = request.nextUrl.searchParams.get("status")?.toLowerCase();
     let licenses; 
