@@ -20,6 +20,7 @@ import {
 import axios from "axios";
 //import { socket } from "@/lib/socket";
 import { printTreeView } from "next/dist/build/utils";
+import { useSocket } from "@/context/SocketContext";
 
 type ConversationUI = {
   id: string;
@@ -41,7 +42,8 @@ type MessagesUI = {
 };
 
 export default function ChatPage() {
-  const { businessId, companyName, socket } = useBusiness();
+  const { businessId, companyName } = useBusiness();
+  const { socket } = useSocket();
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [selectedChat, setSelectedChat] = useState(null);
   const [message, setMessage] = useState("");
@@ -166,9 +168,11 @@ export default function ChatPage() {
       }
     };
   }, [selectedChat]);
-useEffect(() => {
-  console.log("Selected Chat:", selectedChat);
-}, [selectedChat, socket]);
+
+  useEffect(() => {
+    console.log("Selected Chat:", selectedChat);
+  }, [selectedChat, socket]);
+
   // Mock chat data
   const mockConversations = [
     {
