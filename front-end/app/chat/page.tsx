@@ -84,7 +84,7 @@ export default function ChatPage() {
         : m.senderId ?? m.sender ?? "",
     receiverId: m.receiverId ?? "",
     content: m.content ?? "",
-    timestamp: new Date(m.createdAt ?? m.timestamp).toLocaleString(undefined, {
+    timestamp: new Date(m.createdAt ?? m.timestamp).toLocaleString("en-US", {
       year: "numeric",
       month: "numeric",
       day: "numeric",
@@ -132,6 +132,7 @@ export default function ChatPage() {
       console.log("businessId", businessId);
       console.log("data.selectedChat", data.selectedChat);
       console.log("Selected Chat:", selectedChat);
+      console.log("date:", data.msg.timestamp);
       // Check if the message is from the current user
       if (data.msg.sender === businessId.toString()) return;
 
@@ -284,7 +285,7 @@ useEffect(() => {
       sender: businessId,
       receiverId: currentChat.partnerId,
       content: message,
-      timestamp: new Date().toLocaleString(undefined, {
+      timestamp: new Date().toLocaleString("en-US", {
         year: "numeric",
         month: "numeric",
         day: "numeric",
