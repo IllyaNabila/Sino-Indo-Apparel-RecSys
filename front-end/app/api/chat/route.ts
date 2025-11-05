@@ -42,8 +42,6 @@ export async function POST(request: NextRequest) {
       lastMessageId: message._id,
       lastMessageAt: message.sentAt,
     });
-
-    console.log(message);
     return NextResponse.json(message, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
