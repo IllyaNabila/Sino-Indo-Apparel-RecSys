@@ -9,26 +9,14 @@ const membershipSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "conversations",
   },
-  lastReadAt: {
-    type: Date,
-    default: null,
+  unread: {
+    type: Number,
+    default: 0,
   }
 });
 
 // compound index to avoid duplicate memberships
 membershipSchema.index({ userId: 1, conversationId: 1}, { unique: true});
-
-// static method to calculate unread messages
-membershipSchema.statics.getUnreadCount = async function (userId, conversationId) {
-    const membership = await this.findOne({ userId, conversationId });
-    if(!membership) return 0;
-
-    const unread = await mongoose.model("messages").countDocuments({
-        conversationId,
-        createdAt: { $gt: membership.lastReadAt || new Date(0) }
-    });
-    return unread;
-}
 
 const Membership =
   mongoose.models.memberships ||

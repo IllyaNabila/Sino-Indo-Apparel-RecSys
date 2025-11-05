@@ -22,15 +22,17 @@ import {
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { useSocket } from "@/context/SocketContext";
 
 export default function Navigation() {
+  const { unreadCounts } = useSocket();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
   const navigationItems = [
     { name: "Dashboard", href: "/dashboard", icon: Home },
     { name: "Products", href: "/products", icon: Package },
-    { name: "Messages", href: "/chat", icon: MessageSquare, badge: 3 },
+    { name: "Messages", href: "/chat", icon: MessageSquare, badge: Object.values(unreadCounts).filter((count) => count > 0).length },
     { name: "Search", href: "/search", icon: Search },
     //{ name: "Partners", href: "/partners", icon: Users },
     { name: "Feedback", href: "/feedback", icon: MessageSquare },
