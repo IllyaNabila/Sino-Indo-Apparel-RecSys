@@ -43,7 +43,7 @@ type MessagesUI = {
 
 export default function ChatPage() {
   const { businessId, companyName } = useBusiness();
-  const { socket } = useSocket();
+  const { socket, unreadCounts, setUnreadCounts } = useSocket();
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [selectedChat, setSelectedChat] = useState(null);
   const [message, setMessage] = useState("");
@@ -74,7 +74,7 @@ export default function ChatPage() {
       hour: "2-digit",
       minute: "2-digit",
     }),
-    unread: 0,
+    unread: unreadCounts[c._id] ?? 0,
     online: true,
   });
 
@@ -107,7 +107,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     fetchConversation();
-  }, []);
+  }, [unreadCounts]);
 
   useEffect(() => {
     if (!selectedChat) return;
