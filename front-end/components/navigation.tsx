@@ -23,9 +23,11 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useSocket } from "@/context/SocketContext";
+import { useBusiness } from "@/context/BusinessContext";
 
 export default function Navigation() {
   const { unreadCounts } = useSocket();
+  const { setBusinessId } = useBusiness();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
@@ -46,6 +48,7 @@ export default function Navigation() {
       await axios.get("/api/auth/logout");
       toast.success("Logged out successfully");
       router.push("/");
+      setBusinessId("");
     } catch (error: any) {
       console.log(error.message);
 
