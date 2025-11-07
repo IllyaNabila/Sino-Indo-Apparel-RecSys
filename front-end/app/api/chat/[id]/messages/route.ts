@@ -9,9 +9,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const conversationId = params.id;
+    const { id } = await params;
  
-    const messages = await Message.find({ conversationId })
+    const messages = await Message.find({ conversationId: id })
       .sort({ createdAt: 1 })
       .populate("senderId", "_id companyName")
       .populate("receiverId", "_id companyName");
