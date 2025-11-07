@@ -4,6 +4,7 @@ import { io, Socket } from "socket.io-client";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useBusiness } from "./BusinessContext";
 import axios from "axios";
+import { useRef } from "react";
 
 const SOCKET_URL =
   process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
@@ -12,6 +13,8 @@ type SocketContextType = {
   socket: Socket | null;
   unreadCounts: Record<string, number>;
   setUnreadCounts: React.Dispatch<React.SetStateAction<Record<string, number>>>;
+  selectedChat: string | null;
+  setSelectedChat: (id: string | null) => void;
   notifications: any[];
   setNotifications: (notifications: any) => void;
   clearNotification: () => void;
@@ -26,6 +29,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
   const [socket, setSocket] = useState<Socket | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [selectedChat, setSelectedChat] = useState<string | null>(null);
+  const selectedChatRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    selectedChatRef.current = selectedChat;
+  }, [selectedChat]);
 
   useEffect(() => {
     if (!businessId) {
@@ -33,6 +42,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
       setSocket(null);
       return;
     }
+
+    fetchUnread();
 
     const newSocket = io(SOCKET_URL, {
       transports: ["websocket"],
@@ -47,9 +58,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     newSocket.on("newNotification", (data: any) => {
         const { selectedChat: chatId, msg } = data;
         console.log("New notification:", data);
+        console.log("selectedChat socket context:", selectedChat);
+        console.log("chatId socket context", chatId);
         setUnreadCounts((prev) => ({
             ...prev,
-            [chatId]: (prev[chatId] || 0) + 1,
+            [chatId]: selectedChatRef.current === chatId ? 0 : (prev[chatId] || 0) + 1,
         }))
         setNotifications((prev) => [...prev, data]);
     });
@@ -79,6 +92,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     updateUnread();
   }, [notifications, unreadCounts]);
 
+  useEffect(() => {
+    console.log("selected chat context:", selectedChat)
+  }, [selectedChat]);
+
   const fetchUnread = async () => {
     try {
         const res = await axios.get("/api/chat/unread");
@@ -96,7 +113,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <SocketContext.Provider
-      value={{ socket, unreadCounts, setUnreadCounts, notifications, setNotifications, clearNotification }}
+      value={{ socket, unreadCounts, setUnreadCounts, notifications, setNotifications, clearNotification, selectedChat, setSelectedChat }}
     >
       {children}
     </SocketContext.Provider>

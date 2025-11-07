@@ -43,9 +43,9 @@ type MessagesUI = {
 
 export default function ChatPage() {
   const { businessId, companyName } = useBusiness();
-  const { socket, unreadCounts, setUnreadCounts } = useSocket();
+  const { socket, unreadCounts, setUnreadCounts, selectedChat, setSelectedChat } = useSocket();
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const [selectedChat, setSelectedChat] = useState(null);
+  //const [selectedChat, setSelectedChat] = useState(null);
   const [message, setMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
@@ -124,7 +124,7 @@ export default function ChatPage() {
       }
     };
     fetchMessages();
-  }, [selectedChat]);
+  }, [unreadCounts]);
 
   useEffect(() => {
     const handleReceiveMessage = (data: any) => {
@@ -156,7 +156,13 @@ export default function ChatPage() {
       if (data.selectedChat === selectedChat) {
         const uiMsg = toMessageUI(data.msg);
         setMessages((prev) => [...prev, uiMsg]);
+        setUnreadCounts((prev) => ({
+          ...prev,
+          [data.selectedChat]: 0,
+        }));
       }
+
+      console.log("unread Counts:", unreadCounts);
     };
 
     if (socket) {
@@ -316,6 +322,15 @@ export default function ChatPage() {
     }
   };
 
+  const handleSelectChat = (conversationId: any) => {
+    setSelectedChat(conversationId);
+    console.log("Selected Chat:", selectedChat);
+    setUnreadCounts((prev) => ({
+      ...prev,
+      [conversationId]: 0,
+    }));
+  };
+
   const filteredConversations = conversationsDetails.filter((conv) =>
     conv.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -371,7 +386,7 @@ export default function ChatPage() {
               <div
                 key={conversation.id}
                 onClick={() => {
-                  setSelectedChat(conversation.id); // Set the selected chat
+                  handleSelectChat(conversation.id); // Set the selected chat
                   setConversationsDetails((prev) =>
                     prev.map((conv) =>
                       conv.id === conversation.id
