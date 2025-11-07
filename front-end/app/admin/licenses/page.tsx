@@ -712,7 +712,7 @@ export default function AdminLicensesPage() {
                     <span>{previewSubmissionDB?.mimetype}</span>
                   </div>
                   <div className="flex items-center">
-                    <Badge className="mr-2">{previewSubmissionDB?.businessId.businessType ? previewSubmissionDB?.businessId.businessType.charAt(0).toUpperCase() + previewSubmissionDB?.businessId.businessType.slice(1).toLowerCase() : "N/A"}</Badge>
+                    <Badge className="mr-2">{previewSubmissionDB?.businessId.role ? previewSubmissionDB?.businessId.role.charAt(0).toUpperCase() + previewSubmissionDB?.businessId.role.slice(1).toLowerCase() : "N/A"}</Badge>
                     <Badge variant="outline">{previewSubmissionDB?.businessId.country}</Badge>
                   </div>
                 </div>
