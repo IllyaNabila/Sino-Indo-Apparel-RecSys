@@ -1,5 +1,7 @@
 // app/api/nlp/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
+import Product from "@/models/productModel";
 
 const HF_API_TOKEN = process.env.HUGGINGFACE_TOKEN;
 const HF_API_BASE = "https://api-inference.huggingface.co/models";
@@ -56,5 +58,21 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function GET(req: NextRequest){
+  try {
+    let token = req.cookies.get("token")?.value || "";
+    const decodedToken: any = jwt.verify(token, process.env.TOKEN_SECRET!);
+    const businessId = decodedToken.businessId;
+
+    const material = req.nextUrl.searchParams.get("material");
+    const results = await Product.find({material}).populate("businessId", "_id companyName country");
+    console.log("filter result:", results);
+
+    return NextResponse.json(results, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
