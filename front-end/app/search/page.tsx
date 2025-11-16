@@ -24,6 +24,7 @@ import {
 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
+import axios from "axios"
 
 interface Message {
   id: string
@@ -33,6 +34,7 @@ interface Message {
   searchResults?: SearchResult[]
   suggestions?: string[]
   filters?: FilterSuggestion[]
+  rawData?: any[]
 }
 
 interface SearchResult {
@@ -200,7 +202,16 @@ const currentUserProfile = {
     }
   ];
 
-
+  const processQuery = async (query: string): Promise<Message> => {
+    const products = await getProduct(query);
+    return {
+      id: Date.now().toString(),
+      type: "assistant",
+      content: `🔍 I found ${products?.length || 0} results for "${query}". Here's what matches your search:`,
+      timestamp: new Date(),
+      rawData: products || [],
+    }
+  }
    
   const processNLPQuery = async (query: string): Promise<Message> => {
     // Simulate NLP processing
@@ -406,6 +417,20 @@ const processNLPQuery = async (query: string): Promise<Message> => {
   };
 };*/}
 
+  const getProduct = async (query: string) =>{
+    try {
+      const res = await axios.get(`/api/search?material=${query.trim()}`);
+        if (res.status === 200) {
+          console.log("success")
+        }
+        console.log("Fetched search results:", res.data);
+        const results = Array.isArray(res.data) ? res.data : [];
+        return results;
+      } catch (error: any) {
+        console.error("Failed to fetch products:", error);
+        throw new Error("Unable to fetch products right now.")
+      }
+  }
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return
@@ -416,18 +441,29 @@ const processNLPQuery = async (query: string): Promise<Message> => {
       content: inputValue,
       timestamp: new Date(),
     }
-
+    
     setMessages((prev) => [...prev, userMessage])
     setInputValue("")
     setIsTyping(true)
-
+    
     // Simulate AI processing delay
-    setTimeout(async () => {
-      const assistantResponse = await processNLPQuery(inputValue)
+    try {
+      const assistantResponse = await processQuery(inputValue)
       setMessages((prev) => [...prev, assistantResponse])
+    } catch (error: any) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          type: "assistant",
+          timestamp: new Date(),
+          content: error?.message ?? "Sorry, I couldn't fetch results. Please try again.",
+        },
+      ]);
+    } finally {
       setIsTyping(false)
-    }, 1500)
-  }
+    }
+  };
 
   const handleSuggestionClick = (suggestion: string) => {
     setInputValue(suggestion)
@@ -626,6 +662,167 @@ const processNLPQuery = async (query: string): Promise<Message> => {
       </div>
     )
   }
+  
+  const renderRawData = (results: any[]) => {
+    const products = results ?? [];
+    const partners = results.filter((r) => r.type === "partner")
+
+    return (
+      <div className="space-y-4 mt-4">
+        {products.length > 0 && (
+          <div>
+            <h4 className="font-medium text-slate-800 mb-3 flex items-center">
+              <Package className="h-4 w-4 mr-2" />
+              Products ({products.length})
+            </h4>
+            <div className="grid gap-3">
+              {products.map((product) => (
+                <Card key={product._id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-start space-x-3">
+                      {/***/}
+                      <img
+                        src={`data:image/png;base64,${product.images[0]}` || "/placeholder.svg"}
+                        alt={product.name}
+                        className="w-16 h-16 rounded-lg object-cover"
+                      />  
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h5 className="font-medium text-slate-800">{product.name}</h5>
+                            <p className="text-sm text-slate-600">{product.businessId?.companyName}</p>
+                            <p className="text-xs text-slate-500 mt-1">{product.description}</p>
+                          </div>
+                          {/**<Badge className="bg-blue-500 text-white text-xs">{product.relevanceScore}% match</Badge>**/}
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center space-x-4 text-sm">
+                            <span className="text-blue-600 font-medium">${product.priceMin}-{product.priceMax}</span>
+                            <span className="text-slate-500">MOQ: {product.moq}</span>
+                            
+                            <div className="flex items-center">
+                              <MapPin className="h-3 w-3 mr-1" />
+                              {product.businessId?.country}
+                            </div> 
+                          </div>
+                          {/**
+                          <div className="flex items-center space-x-2">
+                            <div className="flex items-center">
+                              <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                              <span className="text-xs ml-1">{product.rating}</span>
+                            </div>
+                            {product.verified && <CheckCircle className="h-3 w-3 text-emerald-600" />}
+                          </div>
+                          */}
+                        </div>
+                        {/**
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {product.tags.map((tag) => (
+                            <Badge key={tag} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                        */}
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button variant="outline" size="sm" className="flex-1">
+                        View Details
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-rose-500 hover:bg-rose-600"
+                        onClick={() => handleStartChat(product)}
+                      >
+                        <MessageSquare className="h-3 w-3 mr-1" />
+                        Chat
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+        {/**
+        {partners.length > 0 && (
+          <div>
+            <h4 className="font-medium text-slate-800 mb-3 flex items-center">
+              <Users className="h-4 w-4 mr-2" />
+              Partners ({partners.length})
+            </h4>
+            <div className="grid gap-3">
+              {partners.map((partner) => (
+                <Card key={partner.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
+                          <span className="font-semibold text-slate-600 text-sm">
+                            {partner.name
+                              .split(" ")
+                              .map((word) => word[0])
+                              .join("")
+                              .slice(0, 2)}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <h5 className="font-medium text-slate-800">{partner.name}</h5>
+                            {partner.verified && <CheckCircle className="h-4 w-4 text-emerald-600" />}
+                          </div>
+                          <p className="text-sm text-slate-600">{partner.description}</p>
+                          <div className="flex items-center space-x-4 text-xs text-slate-500 mt-1">
+                            <span className="flex items-center">
+                              <MapPin className="h-3 w-3 mr-1" />
+                              {partner.location}
+                            </span>
+                            <span>{partner.employees} employees</span>
+                            <span>Response: {partner.responseTime}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {partner.tags.map((tag) => (
+                              <Badge key={tag} variant="outline" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right space-y-2">
+                        <Badge className="bg-blue-500 text-white text-xs mb-2">
+                          {partner.relevanceScore}% match
+                        </Badge>
+                        <div className="flex items-center justify-end mb-2">
+                          <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                          <span className="text-xs ml-1">{partner.rating}</span>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm">
+                            View Profile
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-rose-500 hover:bg-rose-600"
+                            onClick={() => handleStartChat(partner)}
+                          >
+                            <MessageSquare className="h-3 w-3 mr-1" />
+                            Chat
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+        */}
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -672,6 +869,11 @@ const processNLPQuery = async (query: string): Promise<Message> => {
                     {/* Search Results */}
                     {message.searchResults && message.searchResults.length > 0 && (
                       <div className="mt-4">{renderSearchResults(message.searchResults)}</div>
+                    )}
+                    
+                    {/* Search Results */}
+                    {message.rawData && message.rawData.length > 0 && (
+                      <div className="mt-4">{renderRawData(message.rawData)}</div>
                     )}
 
                     {/* Filter Suggestions */}
