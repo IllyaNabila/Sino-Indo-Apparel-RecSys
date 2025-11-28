@@ -24,14 +24,22 @@ import { toast } from "react-hot-toast";
 export default function LoginPage() {
   const { businessId, companyName, setBusinessId, setCompanyName } = useBusiness();
   const router = useRouter();
+  const [isLoading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     rememberMe: false,
   });
 
+  const handleNavigation = async (path: string) => {
+    setLoading(true);
+    await router.push(path);
+    setLoading(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true)
     try {
       const response = await axios.post("/api/auth/login", formData);
       console.log("Login success", response.data);
@@ -43,6 +51,7 @@ export default function LoginPage() {
       console.log("Login failed", error.message);
       toast.error(error.message);
     }
+    setLoading(false);
   };
 
   return (
@@ -125,6 +134,7 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 className="w-full bg-emerald-600 hover:bg-emerald-700"
+                disabled={isLoading}
               >
                 Sign In
               </Button>
@@ -145,11 +155,9 @@ export default function LoginPage() {
             <div className="mt-6 pt-6 border-t">
               <div className="text-center">
                 <p className="text-sm text-slate-600 mb-4">Admin Access</p>
-                <Link href="/admin/login">
-                  <Button variant="outline" className="w-full">
-                    Admin Login
-                  </Button>
-                </Link>
+                <Button variant="outline" className="w-full" onClick={() => handleNavigation("/admin/login")}>
+                  Admin Login
+                </Button>
               </div>
             </div>
           </CardContent>

@@ -1,10 +1,22 @@
+"use client"
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowRight, Shield, MessageSquare, Search, BarChart3, Users, Globe } from "lucide-react"
 import Link from "next/link"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 export default function LandingPage() {
+  const [isLoading, setLoading] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleNavigation = async (path: string, button: string) => {
+    setLoading(button);
+    await router.push(path);
+    setLoading(null);
+  };
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header */}
@@ -17,12 +29,12 @@ export default function LandingPage() {
             <span className="font-bold text-xl text-slate-800">Sino-Indo Apparel Matcher</span>
           </div>
           <div className="flex items-center space-x-4">
-            <Link href="/auth/login">
-              <Button variant="ghost">Login</Button>
-            </Link>
-            <Link href="/auth/register">
-              <Button className="bg-rose-500 hover:bg-rose-600">Get Started</Button>
-            </Link>
+            <Button variant="ghost" disabled={isLoading === "login"} onClick={() => handleNavigation("/auth/login", "login")}>
+              Login
+            </Button>
+            <Button className="bg-rose-500 hover:bg-rose-600" disabled={isLoading === "register"} onClick={() => handleNavigation("/auth/register", "register")}>
+              Get Started
+            </Button>
           </div>
         </div>
       </header>
@@ -41,11 +53,9 @@ export default function LandingPage() {
             Match with verified apparel partners, discover culturally-relevant products, and grow your cross-border business through AI-powered recommendations tailored for the China–Indonesia trade.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/auth/register">
-              <Button size="lg" className="bg-rose-500 hover:bg-rose-600">
-                Start Your Journey <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+            <Button size="lg" className="bg-rose-500 hover:bg-rose-600" disabled={isLoading === "start your journey"} onClick={() => handleNavigation("/auth/register", "start your journey")}>
+              Start Your Journey <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
             <Button size="lg" variant="outline">
               Learn More
             </Button>
