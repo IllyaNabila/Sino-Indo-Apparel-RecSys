@@ -86,6 +86,8 @@ export default function SearchPage() {
   const [chatMessage, setChatMessage] = useState("")
   const [isStartingChat, setIsStartingChat] = useState(false)
   const [showChatModal, setShowChatModal] = useState(false)
+  const [displayProduct, setDisplayProduct] = useState(false)
+  const [viewProduct, setViewProduct] = useState(Object)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -727,7 +729,11 @@ const processNLPQuery = async (query: string): Promise<Message> => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Button variant="outline" size="sm" className="flex-1">
+                      <Button variant="outline" size="sm" className="flex-1" 
+                      onClick={() => {
+                        setViewProduct(product)
+                        setDisplayProduct(true)
+                      }}>
                         View Details
                       </Button>
                       <Button
@@ -1113,6 +1119,109 @@ const processNLPQuery = async (query: string): Promise<Message> => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={displayProduct} onOpenChange={setDisplayProduct}>
+        <DialogContent className="overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">
+        {viewProduct.name || "Unnamed Product"}
+            </DialogTitle>
+            <DialogDescription>
+              View detailed product information below.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Body */}
+          <div className="space-y-4 mt-2 overflow-y-auto max-h-[60vh]">
+            <div>
+              <p className="text-sm text-muted-foreground">Description</p>
+              <p className="text-base">{viewProduct.description || "-"}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Category</p>
+                <p className="font-medium">{viewProduct.category || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Material</p>
+                <p className="font-medium">{viewProduct.material || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">MOQ</p>
+                <p className="font-medium">{viewProduct.moq || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Lead Time</p>
+                <p className="font-medium">{viewProduct.leadTime || "-"}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Price Min</p>
+                <p className="font-medium">RM {viewProduct.priceMin || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Price Max</p>
+                <p className="font-medium">RM {viewProduct.priceMax || "-"}</p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm text-muted-foreground">Colors</p>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {viewProduct.colors?.length > 0 ? (
+                  viewProduct.colors.map((c: string, i: number) => (
+                    <span
+                      key={i}
+                      className="px-2 py-1 text-sm rounded bg-gray-100"
+                    >
+                      {c}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm">No colors specified</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm text-muted-foreground">Sizes</p>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {viewProduct.sizes?.length > 0 ? (
+                  viewProduct.sizes.map((s: string, i: number) => (
+                    <span
+                      key={i}
+                      className="px-2 py-1 text-sm rounded bg-gray-100"
+                    >
+                      {s}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm">No sizes specified</p>
+                )}
+              </div>
+            </div>
+
+            {/* Images */}
+            {viewProduct.images?.length > 0 && (
+              <div>
+                <p className="text-sm text-muted-foreground">Images</p>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {viewProduct.images.map((img: string | File, i: number) => (
+                    <img
+                      key={i}
+                      src={typeof img === "string" ? `data:image/png;base64,${img}` : URL.createObjectURL(img)}
+                      alt={`Product image ${i + 1}`}
+                      className="rounded-lg border object-cover h-32 w-full"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
