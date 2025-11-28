@@ -65,6 +65,26 @@ export default function ProfilePage() {
     description: "",
   });
 
+  const [initialCompanyInfo, setInitialCompanyInfo] = useState({
+    companyName: "",
+    registrationNumber: "",
+    address: "",
+    email: "",
+    phoneNumber: "",
+    website: "",
+    description: "",
+  });
+  const [isCompanyInfoChanged, setIsCompanyInfoChanged] = useState(false);
+
+  // State for tracking preference changes
+  const [isPreferencesChanged, setIsPreferencesChanged] = useState(false);
+  const [initialPreferences, setInitialPreferences] = useState({
+    materialPreferences: [] as string[],
+    productCategories: {} as Record<string, boolean>,
+    customTags: [] as string[],
+    partnerRegions: [] as string[],
+  });
+
   const [licenseStatus, setLicenseStatus] = useState<LicenseStatus>({
     status: "approved", // pending, approved, rejected
     submittedDate: "2024-01-15",
@@ -139,6 +159,7 @@ export default function ProfilePage() {
       });
 
       console.log("Update success:", response.data);
+      setIsCompanyInfoChanged(false); // Reset after successful save
       // Optionally show success message or toast
     } catch (error: any) {
       console.error("Update failed:", error.response?.data || error.message);
@@ -275,6 +296,7 @@ export default function ProfilePage() {
         const data = res.data;
 
         setCompanyInfo(data.companyInfo);
+        setInitialCompanyInfo(data.companyInfo);
         setLicenseStatus(data.licenseStatus);
         // Extract preference data
         const prefs = data.preference || {};
@@ -308,6 +330,13 @@ export default function ProfilePage() {
         });
 
         setProductCategories(categoryObj);
+
+        setInitialPreferences({
+          materialPreferences: prefs.materialPreferences || [],
+          productCategories: categoryObj,
+          customTags: prefs.customTags || [],
+          partnerRegions: prefs.regions || [],
+        });
       } catch (err: any) {
         console.error(
           "Error fetching profile:",
@@ -318,6 +347,37 @@ export default function ProfilePage() {
 
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    const hasChanged =
+      companyInfo.companyName !== initialCompanyInfo.companyName ||
+      companyInfo.registrationNumber !==
+        initialCompanyInfo.registrationNumber ||
+      companyInfo.address !== initialCompanyInfo.address ||
+      companyInfo.description !== initialCompanyInfo.description;
+
+    setIsCompanyInfoChanged(hasChanged);
+  }, [companyInfo, initialCompanyInfo]);
+
+  useEffect(() => {
+    const materialsChanged =
+      JSON.stringify(materialPreferences.sort()) !==
+      JSON.stringify(initialPreferences.materialPreferences.sort());
+    const categoriesChanged =
+      JSON.stringify(productCategories) !==
+      JSON.stringify(initialPreferences.productCategories);
+    const tagsChanged =
+      JSON.stringify(customTags.sort()) !==
+      JSON.stringify(initialPreferences.customTags.sort());
+    const regionsChanged =
+      JSON.stringify(partnerPreferences.regions.sort()) !==
+      JSON.stringify(initialPreferences.partnerRegions.sort());
+
+    setIsPreferencesChanged(
+      materialsChanged || categoriesChanged || tagsChanged || regionsChanged
+    );
+  }, [materialPreferences, productCategories, customTags, partnerPreferences.regions, initialPreferences]);
+
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -516,6 +576,7 @@ export default function ProfilePage() {
 
                       <Button
                         type="submit"
+                        disabled={!isCompanyInfoChanged}
                         className="bg-rose-500 hover:bg-rose-600"
                       >
                         Save Changes
@@ -676,6 +737,7 @@ export default function ProfilePage() {
                 </Button>*/}
                 <Button
                   onClick={handleSavePreferences}
+                  disabled={!isPreferencesChanged}
                   className="bg-rose-500 hover:bg-rose-600"
                 >
                   <Save className="h-4 w-4 mr-2" />
