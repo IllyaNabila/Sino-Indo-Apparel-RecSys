@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   Card,
@@ -131,6 +132,14 @@ export default function DashboardPage() {
   const [region, setRegion] = useState("all");
   const [season, setSeason] = useState("all");
   const [demographic, setDemographic] = useState("all");
+  const router = useRouter();
+  const [isLoading, setLoading] = useState(false);
+
+  const handleNavigation = async (path: string) => {
+    setLoading(true);
+    await router.push(path);
+    setLoading(false);
+  }
 
  {/* // Mock data
   const stats = [
@@ -253,11 +262,9 @@ export default function DashboardPage() {
               <Bell className="h-4 w-4 mr-2" />
               Notifications
             </Button>*/}
-            <Link href="/profile">
-              <Button variant="outline" size="sm" className="bg-rose-500 hover:bg-rose-600 text-white hover:text-white ">
-                Profile
-              </Button>
-            </Link>
+            <Button variant="outline" size="sm" className="bg-rose-500 hover:bg-rose-600 text-white hover:text-white " disabled={isLoading} onClick={() => handleNavigation("/profile")}>
+              Profile
+            </Button>
           </div>
         </div>
       </header>

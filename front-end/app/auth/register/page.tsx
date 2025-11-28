@@ -27,6 +27,7 @@ import toast from 'react-hot-toast'
 
 export default function RegisterPage() {
   const router = useRouter();
+  const [isLoading, setLoading] = useState(false);
   //const [createUserWithEmailAndPassword, userCredential, loading, hookError] = useCreateUserWithEmailAndPassword(auth);
 
   const [formData, setFormData] = useState({
@@ -49,7 +50,7 @@ export default function RegisterPage() {
       alert("Passwords do not match.");
       return;
     }
-
+    setLoading(true);
     try {
       const response = await axios.post('/api/auth/register', formData)
       console.log("Signup success", response.data);
@@ -59,6 +60,7 @@ export default function RegisterPage() {
       
       toast.error(error.message);
     }
+    setLoading(false);
   };
 
   return (
@@ -206,7 +208,7 @@ export default function RegisterPage() {
               
                 type="submit"
                 className="w-full bg-emerald-600 hover:bg-emerald-700"
-                disabled={!formData.agreeToTerms || !formData.role}
+                disabled={!formData.agreeToTerms || !formData.role || isLoading}
               >
                 Create Account
               </Button>
