@@ -38,6 +38,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import axios from "axios";
+import { useBusiness } from "@/context/BusinessContext";
 
 type PartnerPreferences = {
   regions: string[];
@@ -55,6 +56,7 @@ type LicenseStatus = {
 
 export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { businessObject } = useBusiness();
   const [companyInfo, setCompanyInfo] = useState({
     companyName: "",
     registrationNumber: "",
@@ -347,6 +349,23 @@ export default function ProfilePage() {
 
     fetchProfile();
   }, []);
+
+  // This effect syncs the businessObject from context to the local state
+  useEffect(() => {
+    if (businessObject) {
+      const info = {
+        companyName: businessObject.companyName || "",
+        registrationNumber: businessObject.registrationNumber || "",
+        address: businessObject.address || "",
+        email: businessObject.email || "",
+        phoneNumber: businessObject.phoneNumber || "",
+        website: businessObject.website || "",
+        description: businessObject.description || "",
+      };
+      setCompanyInfo(info);
+      setInitialCompanyInfo(info);
+    }
+  }, [businessObject]);
 
   useEffect(() => {
     const hasChanged =
