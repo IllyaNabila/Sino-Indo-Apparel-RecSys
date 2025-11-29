@@ -136,7 +136,13 @@ export default function LoginPage() {
                 className="w-full bg-emerald-600 hover:bg-emerald-700"
                 disabled={isLoading}
               >
-                Sign In
+                {isLoading ? 
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Signing in...
+                </> 
+                : 
+                "Sign In"}
               </Button>
             </form>
 
