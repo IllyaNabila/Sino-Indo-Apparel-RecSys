@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
       success: true,
       businessId: business._id,
       companyName: business.companyName,
+      businessObject: business,
     });
 
     response.cookies.set("token", token, {
