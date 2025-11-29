@@ -27,7 +27,7 @@ import { useBusiness } from "@/context/BusinessContext";
 
 export default function Navigation() {
   const { unreadCounts } = useSocket();
-  const { setBusinessId } = useBusiness();
+  const { setBusinessId, clearBusiness } = useBusiness();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
@@ -46,9 +46,9 @@ export default function Navigation() {
   const logout = async () => {
     try {
       await axios.get("/api/auth/logout");
+      clearBusiness();
       toast.success("Logged out successfully");
       router.push("/");
-      setBusinessId("");
     } catch (error: any) {
       console.log(error.message);
 
