@@ -22,7 +22,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 
 export default function LoginPage() {
-  const { businessId, companyName, setBusinessId, setCompanyName } = useBusiness();
+  const { businessId, companyName, businessObject, setBusinessObject, setBusinessId, setCompanyName } = useBusiness();
   const router = useRouter();
   const [isLoading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -46,6 +46,7 @@ export default function LoginPage() {
       toast.success("Login success");
       setBusinessId(response.data.businessId);
       setCompanyName(response.data.companyName);
+      setBusinessObject(response.data.businessObject);
       router.push("/dashboard");
     } catch (error: any) {
       console.log("Login failed", error.message);
