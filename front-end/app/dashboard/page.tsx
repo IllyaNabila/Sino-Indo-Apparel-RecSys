@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -40,6 +40,11 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+import { useBusiness } from "@/context/BusinessContext";
+
+// Dynamically import the ProfileButton with SSR turned off
+const ProfileButton = dynamic(() => import('@/app/dashboard/ProfileButton'), { ssr: false });
 
 // Mock data for charts
 const TREND_DATA = {
@@ -125,21 +130,12 @@ const SEASONAL_DATA = {
 };
 
 export default function DashboardPage() {
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedSeason, setSelectedSeason] = useState("");
   const [country, setCountry] = useState("all");
   const [region, setRegion] = useState("all");
   const [season, setSeason] = useState("all");
   const [demographic, setDemographic] = useState("all");
-  const router = useRouter();
-  const [isLoading, setLoading] = useState(false);
-
-  const handleNavigation = async (path: string) => {
-    setLoading(true);
-    await router.push(path);
-    setLoading(false);
-  }
 
  {/* // Mock data
   const stats = [
@@ -262,9 +258,7 @@ export default function DashboardPage() {
               <Bell className="h-4 w-4 mr-2" />
               Notifications
             </Button>*/}
-            <Button variant="outline" size="sm" className="bg-rose-500 hover:bg-rose-600 text-white hover:text-white " disabled={isLoading} onClick={() => handleNavigation("/profile")}>
-              Profile
-            </Button>
+            <ProfileButton />
           </div>
         </div>
       </header>
