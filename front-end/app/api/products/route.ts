@@ -26,6 +26,14 @@ export async function POST(request: NextRequest){
             images
         } = reqBody;
 
+        const searchText = [
+            name,
+            category,
+            material,
+            description,
+            colors,
+        ].join(" ").toLowerCase();
+
         const newProduct = new Product({
             businessId,
             name,
@@ -39,6 +47,7 @@ export async function POST(request: NextRequest){
             sizes,
             leadTime,
             images,
+            searchText,
         });
 
         const savedProduct = await newProduct.save();
@@ -100,6 +109,14 @@ export async function PATCH(req: NextRequest) {
                 leadTime,
                 images, } = body;
 
+        const searchText = [
+            name,
+            category,
+            material,
+            description,
+            colors,
+        ].join(" ").toLowerCase();
+
         const updated = await Product.findOneAndUpdate(
             {_id: productId, businessId},
             {
@@ -114,6 +131,7 @@ export async function PATCH(req: NextRequest) {
                 sizes,
                 leadTime,
                 images,
+                searchText,
             },
             {  new: true}
         );

@@ -18,6 +18,7 @@ const productSchema = new mongoose.Schema(
     sizes: [String],
     leadTime: String,
     images: [String],
+    searchText: String,
   },
   {
     timestamps: true,
