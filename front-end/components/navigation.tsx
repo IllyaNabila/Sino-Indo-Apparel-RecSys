@@ -102,10 +102,12 @@ export default function Navigation() {
                   }`}
                 />
                 {item.name}
-                {item.badge && (
+                {item.badge ? (
                   <Badge className="ml-auto bg-blue-500 text-white">
                     {item.badge}
                   </Badge>
+                ): (
+                  ""
                 )}
               </Link>
             ))}
