@@ -11,6 +11,9 @@ const conversationSchema = new mongoose.Schema(
       ref: "messages",
     },
     lastMessageAt: Date,
+    isEnded: Boolean,
+    productContext: String,
+    feedbackForm: String,
   },
   {
     timestamps: true,

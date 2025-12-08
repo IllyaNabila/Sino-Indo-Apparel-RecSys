@@ -16,11 +16,15 @@ import {
   Video,
   CheckCircle,
   Clock,
+  MessageCircleOff,
+  Package,
 } from "lucide-react";
 import axios from "axios";
 //import { socket } from "@/lib/socket";
-import { printTreeView } from "next/dist/build/utils";
 import { useSocket } from "@/context/SocketContext";
+import { ChatMessageContent } from "@/app/chat/ChatMessageContent";
+import { FeedbackForm } from "@/app/chat/FeedbackForm";
+import { CompanyProfileModal } from "@/app/chat/CompanyProfileModal";
 
 type ConversationUI = {
   id: string;
@@ -31,6 +35,9 @@ type ConversationUI = {
   timestamp: string;
   unread: number;
   online: boolean;
+  isEnded?: boolean; // Add this
+  productContext?: string | null; // And this
+  feedbackForm?: string | null;
 };
 
 type MessagesUI = {
@@ -50,6 +57,9 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const [conversationsDetails, setConversationsDetails] = useState<any[]>([]);
+  const [endedConversations, setEndedConversations] = useState<Record<string, boolean>>({});
+  const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+  const [productContexts, setProductContexts] = useState<Record<string, string | null>>({});
 
   function generateObjectId(): string {
     const timestamp = Math.floor(Date.now() / 1000).toString(16);
@@ -76,6 +86,9 @@ export default function ChatPage() {
     }),
     unread: unreadCounts[c._id] ?? 0,
     online: true,
+    isEnded: c.isEnded ?? false, // Add this
+    productContext: c.productContext ?? "", // And this
+    feedbackForm: c.feedbackForm ?? "completed",
   });
 
   const toMessageUI = (m: any): MessagesUI => ({
@@ -100,6 +113,7 @@ export default function ChatPage() {
       const { data } = await axios.get("/api/chat");
       const mapped = data.map(toConversationUI);
       setConversationsDetails(mapped);
+      console.log(data)
     } catch (error: any) {
       console.error("Error loading conversation:", error);
     }
@@ -125,6 +139,22 @@ export default function ChatPage() {
     };
     fetchMessages();
   }, [unreadCounts]);
+
+  // Effect to check for new product context and reset conversation state
+  {/**useEffect(() => {
+    if (!selectedChat) return;
+
+    const productIdRegex = /Product ID: ([a-fA-F0-9]{24})/;
+    const lastMessage = messages[messages.length - 1];
+    const match = lastMessage?.content.match(productIdRegex);
+    const currentProductContext = productContexts[selectedChat];
+
+    if (match && match[1] && match[1] !== currentProductContext) {
+      // New product detected, re-enable this conversation
+      setProductContexts(prev => ({ ...prev, [selectedChat]: match[1] }));
+      setEndedConversations(prev => ({ ...prev, [selectedChat]: false }));
+    }
+  }, [messages, selectedChat, productContexts]);*/}
 
   useEffect(() => {
     const handleReceiveMessage = (data: any) => {
@@ -286,6 +316,28 @@ export default function ChatPage() {
     (chat) => chat.id === selectedChat
   );
 
+  const isCurrentConversationEnded = currentChat?.isEnded ?? false;
+console.log(currentChat)
+  const handleEndConversation = async () => {
+    if (selectedChat) {
+      console.log(selectedChat)
+      try {
+        const response = await axios.patch(`/api/chat?conversationId=${selectedChat}`, {
+          isEnded: true,
+          feedbackForm: "awaiting_rating"
+        });
+        if (response.status == 200) {
+          setConversationsDetails(prev => prev.map(c => 
+            c.id === selectedChat ? {...c,
+          feedbackForm: "awaiting_rating", isEnded: true} : c
+          ));
+        }
+      } catch (error: any) {
+        console.error("Failed to end the conversation:", error);
+      }
+    }
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || !currentChat) return;
@@ -307,7 +359,7 @@ export default function ChatPage() {
     setMessage("");
 
     try {
-      const response = await axios.post("/api/chat", {
+      const response = await axios.post(`/api/chat/${selectedChat}/messages`, {
         receiverId: currentChat.partnerId,
         content: message,
       });
@@ -480,9 +532,15 @@ export default function ChatPage() {
                   </div>
                   <div>
                     <div className="flex items-center space-x-2">
-                      <h2 className="font-semibold text-slate-800">
+                      <h2
+                        className="font-semibold text-slate-800 cursor-pointer hover:underline"
+                        onClick={() => setIsCompanyModalOpen(true)}
+                      >
                         {currentChat.name}
                       </h2>
+                      <Button variant="outline" size="sm" onClick={handleEndConversation} disabled={isCurrentConversationEnded}>
+                        <MessageCircleOff className="h-4 w-4 mr-2" /> End Conversation
+                      </Button>
                       {currentChat.verified && (
                         <CheckCircle className="h-4 w-4 text-emerald-600" />
                       )}
@@ -526,7 +584,7 @@ export default function ChatPage() {
                           : "bg-white border text-slate-800"
                       }`}
                     >
-                      <p className="text-sm">{msg.content}</p>
+                      <ChatMessageContent content={msg.content} />
                       <div className="flex items-center justify-between mt-2">
                         <span
                           className={`text-xs ${
@@ -556,35 +614,47 @@ export default function ChatPage() {
                 <div ref={messagesEndRef}></div>
               </div>
 
-              {/* Message Input */}
-              <div className="bg-white border-t p-4">
-                <form
-                  onSubmit={handleSendMessage}
-                  className="flex items-center space-x-2"
-                >
-                  <div className="flex-1">
-                    <Input
-                      placeholder="Type your message..."
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      className="w-full"
-                    />
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <Languages className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-rose-500 hover:bg-rose-600"
+              {isCurrentConversationEnded ? (
+                <div className="p-4 border-t bg-white">
+                  <FeedbackForm
+                    partnerName={currentChat.name}
+                    conversationId={currentChat.id}
+                    feedbackForm={currentChat.feedbackForm}
+                    productContext={currentChat.productContext}
+                  />
+                </div>
+              ) : (
+                /* Message Input */
+                <div className="bg-white border-t p-4">
+                  <form
+                    onSubmit={handleSendMessage}
+                    className="flex items-center space-x-2"
                   >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </form>
-                <p className="text-xs text-slate-500 mt-2">
-                  Messages are automatically translated between Bahasa Indonesia
-                  and Simplified Chinese
-                </p>
-              </div>
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Type your message..."
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        className="w-full"
+                        disabled={isCurrentConversationEnded}
+                      />
+                    </div>
+                    <Button variant="outline" size="sm" disabled={isCurrentConversationEnded}>
+                      <Languages className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="bg-rose-500 hover:bg-rose-600"
+                      disabled={isCurrentConversationEnded}
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </form>
+                  <p className="text-xs text-slate-500 mt-2">
+                    Messages are automatically translated between Bahasa Indonesia and Simplified Chinese
+                  </p>
+                </div>
+              )}
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center">
@@ -602,6 +672,11 @@ export default function ChatPage() {
             </div>
           )}
         </div>
+        <CompanyProfileModal
+          isOpen={isCompanyModalOpen}
+          onClose={() => setIsCompanyModalOpen(false)}
+          businessId={currentChat?.partnerId || null}
+        />
       </div>
     </div>
   );

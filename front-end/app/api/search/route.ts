@@ -85,20 +85,8 @@ export async function GET(req: NextRequest) {
     // Search for documents where either:
     // 1. The 'searchText' field exists and matches the query.
     // 2. The 'searchText' field does NOT exist, and the query matches one of the fallback fields.
-    const results = await Product.find({
-      $or: [
-        { searchText: { $exists: true, $regex: regex } },
-        {
-          searchText: { $exists: false },
-          $or: [
-            { name: regex },
-            { category: regex },
-            { material: regex },
-            { description: regex },
-            { colors: regex },
-          ],
-        },
-      ],
+    const results = await Product.find(
+      { searchText: { $exists: true, $regex: regex } 
     }).populate("businessId", "_id companyName country");
     console.log("filter result:", results);
 
