@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
 
         if (id) {
             // Fetch specific product by ID and businessId
-            const product = await Product.findOne({_id: id, businessId});
+            const product = await Product.findOne({_id: id});
             if (!product) {
                 return NextResponse.json({ error: "Product not found"}, {status: 404});
             }
