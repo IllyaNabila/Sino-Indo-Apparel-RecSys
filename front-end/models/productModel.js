@@ -17,8 +17,13 @@ const productSchema = new mongoose.Schema(
     colors: [String],
     sizes: [String],
     leadTime: String,
+    listingType: String,
     images: [String],
     searchText: String,
+    name_norm: String,
+    category_norm: String,
+    material_norm: String,
+    description_norm: String,
   },
   {
     timestamps: true,
