@@ -2,14 +2,38 @@ import {connect} from '@/dbConfig/dbConfig'
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from "jsonwebtoken";
 import Product from '@/models/productModel'
+import Business from '@/models/businessModel';
 
 connect();
+
+const NEXT_PUBLIC_AI_URL = process.env.NEXT_PUBLIC_AI_URL || "http://localhost:8000";
+
+function normalizeText(text?: string) {
+  if (!text) return "";
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 export async function POST(request: NextRequest){
     try {
         let token = request.cookies.get("token")?.value || "";
         const decodedToken: any = jwt.verify(token, process.env.TOKEN_SECRET!);
         const businessId = decodedToken.businessId;
+
+        const business = await Business.findOne({"_id": businessId});
+        if (!business || !business.role) {
+            throw new Error("Business or role not found");
+        }
+
+        const roleToListingType: Record<string, string> = {
+            importer: "request",
+            manufacturer: "offer",
+        };
+
+        const listingType = roleToListingType[business.role] || "unknown";
 
         const reqBody = await request.json();
         const {
@@ -23,7 +47,7 @@ export async function POST(request: NextRequest){
             colors,
             sizes,
             leadTime,
-            images
+            images,
         } = reqBody;
 
         const searchText = [
@@ -31,7 +55,6 @@ export async function POST(request: NextRequest){
             category,
             material,
             description,
-            colors,
         ].join(" ").toLowerCase();
 
         const newProduct = new Product({
@@ -46,11 +69,29 @@ export async function POST(request: NextRequest){
             colors,
             sizes,
             leadTime,
+            listingType,
             images,
             searchText,
+
+            name_norm: normalizeText(name),
+            category_norm: normalizeText(category),
+            material_norm: normalizeText(material),
+            description_norm: normalizeText(description),
         });
 
         const savedProduct = await newProduct.save();
+
+        const embed = await fetch(`${NEXT_PUBLIC_AI_URL}/api/embed-one`, {
+        method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({productId: savedProduct._id}),
+        });
+
+        if (!embed.ok) {
+            console.error("Failed to embed product:", await embed.text());
+            throw new Error("Embedding failed");
+        }
+
         return NextResponse.json(savedProduct, { status: 201});    
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, {status: 500 });
@@ -68,7 +109,7 @@ export async function GET(req: NextRequest) {
 
         if (id) {
             // Fetch specific product by ID and businessId
-            const product = await Product.findOne({_id: id});
+            const product = await Product.findOne({_id: id}).populate("businessId", "_id companyName country");;
             if (!product) {
                 return NextResponse.json({ error: "Product not found"}, {status: 404});
             }
@@ -113,8 +154,7 @@ export async function PATCH(req: NextRequest) {
             name,
             category,
             material,
-            description,
-            colors,
+            description
         ].join(" ").toLowerCase();
 
         const updated = await Product.findOneAndUpdate(
@@ -132,6 +172,10 @@ export async function PATCH(req: NextRequest) {
                 leadTime,
                 images,
                 searchText,
+                name_norm: normalizeText(name),
+                category_norm: normalizeText(category),
+                material_norm: normalizeText(material),
+                description_norm: normalizeText(description),
             },
             {  new: true}
         );
@@ -141,6 +185,17 @@ export async function PATCH(req: NextRequest) {
         if (!updated) {
               return NextResponse.json({ error: "Product not found" }, { status: 404 });
             }
+
+        const embed = await fetch(`${NEXT_PUBLIC_AI_URL}/api/embed-one`, {
+        method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({productId: updated._id}),
+        });
+
+        if (!embed.ok) {
+            console.error("Failed to embed product:", await embed.text());
+            throw new Error("Embedding failed");
+        }
 
         return NextResponse.json({ message: "Product updated", updated});
     } catch (err: any) {
