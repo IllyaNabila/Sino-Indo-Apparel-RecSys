@@ -1,0 +1,85 @@
+{
+  "MATERIALS": [
+    "organic cotton",
+    "cotton",
+    "polyester",
+    "rayon",
+    "spandex",
+    "denim",
+    "linen",
+    "silk",
+    "nylon",
+    "jersey",
+    "fleece",
+    "wool",
+    "viscose",
+    "canvas",
+    "corduroy",
+    "lycra",
+    "modal"
+  ],
+
+  "CATEGORY": [
+    "children wear",
+    "kids wear",
+    "menswear",
+    "womenswear",
+    "sportswear",
+    "hijab",
+    "hijabs",
+    "outerwear",
+    "uniform",
+    "uniforms",
+    "tshirt",
+    "tshirts",
+    "hoodie",
+    "hoodies",
+    "activewear",
+    "baby clothes",
+    "sleepwear",
+    "dress",
+    "dresses"
+  ],
+
+  "ATTRIBUTES": [
+    "breathable",
+    "lightweight",
+    "organic",
+    "waterproof",
+    "premium",
+    "stretchable",
+    "soft",
+    "cooling",
+    "quick dry",
+    "durable"
+  ],
+
+  "LOCATIONS": [
+    "china",
+    "indonesia",
+    "jakarta",
+    "bandung",
+    "surabaya",
+    "yogyakarta",
+    "bali",
+    "guangzhou",
+    "shenzhen",
+    "shanghai",
+    "hangzhou",
+    "beijing",
+    "ningbo"
+  ],
+
+  "MATERIAL_SYNONYMS": {
+    "cotton": ["cotton", "cotton fabric", "soft cotton", "cotton material"],
+    "polyester": ["polyester", "poly", "poly fabric"],
+    "spandex": ["spandex", "stretch material", "lycra"],
+    "rayon": ["rayon", "viscose rayon"],
+    "denim": ["denim", "jeans fabric"],
+    "linen": ["linen", "linen fiber"],
+    "silk": ["silk", "silky"],
+    "nylon": ["nylon", "synthetic nylon"],
+    "jersey": ["jersey", "jersey knit"],
+    "fleece": ["fleece", "soft fleece"]
+  }
+}
