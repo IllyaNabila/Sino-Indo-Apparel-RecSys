@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   CheckCircle,
+  ShieldOff,
 } from "lucide-react";
 
 import axios from "axios";
@@ -27,10 +28,10 @@ import { useBusiness } from "@/context/BusinessContext";
 
 export default function Navigation() {
   const { unreadCounts } = useSocket();
-  const { setBusinessId, clearBusiness } = useBusiness();
+  const { setBusinessId, clearBusiness, businessObject } = useBusiness();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-
+  const isVerified = !!businessObject?.verified;
   const navigationItems = [
     { name: "Dashboard", href: "/dashboard", icon: Home },
     { name: "Products", href: "/products", icon: Package },
@@ -72,15 +73,24 @@ export default function Navigation() {
             </span>
           </div>
 
-          {/* User Status 
+          {/* User Status */}
           <div className="mt-6 px-4">
+            {!isVerified ? (
+              <div className="flex items-center space-x-2 p-3 bg-red-50 rounded-lg">
+                <ShieldOff className="h-4 w-4 text-red-600" />
+                <span className="text-sm font-medium text-red-800">
+                  Unverified Business
+                </span>
+              </div>
+            ) : (
             <div className="flex items-center space-x-2 p-3 bg-emerald-50 rounded-lg">
               <CheckCircle className="h-4 w-4 text-emerald-600" />
               <span className="text-sm font-medium text-emerald-800">
                 Verified Business
               </span>
             </div>
-          </div>*/}
+            )}
+          </div>
 
           {/* Navigation */}
           <nav className="mt-6 flex-1 px-2 space-y-1">
