@@ -59,6 +59,15 @@ export async function PATCH(request: NextRequest) {
         { status: 400 }
       );
     }
+    
+    const license = await BusinessLicense.findById({_id: licenseId});
+    if (!license) return NextResponse.json({ success: false, message: "License not found"});
+
+    const verified = verificationStatus === "approved";
+    const updateData: any = {
+      verificationStatus,
+      verifiedAt: new Date()
+    };
   
     if (verificationStatus === "rejected" && !rejectionReason) {
       return NextResponse.json(
@@ -67,25 +76,28 @@ export async function PATCH(request: NextRequest) {
       );
     }
   
-    const updateData: any = {
-      verificationStatus,
-      verifiedAt: new Date()
-    };
-  
     if (verificationStatus === "rejected") {
       updateData.rejectionReason = rejectionReason;
     } else {
       updateData.rejectionReason = null;
     }
-  
+
+    const businessId = license.businessId;
+
     const updatedLicense = await BusinessLicense.findByIdAndUpdate(
       { _id: licenseId },
       updateData,
       { new: true},
     );
+
+    const updatedBusiness = await Business.findByIdAndUpdate( 
+      {_id: businessId }, 
+      { verified }, 
+      { new: true},
+    );
   
     return NextResponse.json({
-      success: true, data: updatedLicense
+      success: true, data: {updatedLicense, updatedBusiness}
     });
   } catch (error: any) {
     console.error("Error updating license:", error);
