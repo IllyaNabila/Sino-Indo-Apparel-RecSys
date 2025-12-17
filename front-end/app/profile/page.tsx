@@ -284,6 +284,7 @@ export default function ProfilePage() {
       });
 
       console.log("Preferences saved:", res.data);
+      setIsPreferencesChanged(false)
       // Optionally: Show toast notification or UI feedback
     } catch (err: any) {
       console.error("Error saving preferences:", err.response?.data || err.message);
