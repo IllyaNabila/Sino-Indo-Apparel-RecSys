@@ -22,6 +22,22 @@ const preferenceSchema = new mongoose.Schema({
     type: [String],
     default: [],
   },
+  primaryMarkets_norm: {
+    type: [String],
+    default: [],
+  },
+  productCategories_norm: {
+    type: [String],
+    default: [],
+  },
+  materials_norm: {
+    type: [String],
+    default: [],
+  },
+  customTags_norm: {
+    type: [String],
+    default: [],
+  },
 }, {
   timestamps: true,
 });

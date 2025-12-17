@@ -6,6 +6,14 @@ import Business from "@/models/businessModel";
 
 connect();
 
+function normalizeString(value: string): string {
+  return value.toLowerCase().trim().replace(/[^a-z0-9\s]/gi, "").replace(/\s+/g, " ");
+}
+
+function normalizeArray(values: string[]): string[] {
+  return [...new Set(values.map(normalizeString))]; // Normalize and deduplicate
+}
+
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get("token")?.value || "";
@@ -52,6 +60,10 @@ export async function POST(request: NextRequest) {
       productCategories: surveyData.productCategories,
       materials: surveyData.materials,
       customTags,
+      primaryMarkets_norm: normalizeArray(surveyData.primaryMarkets),
+      productCategories_norm: normalizeArray(surveyData.productCategories),
+      materials_norm: normalizeArray(surveyData.materials),
+      customTags_norm: normalizeArray(customTags),
     });
 
     const savedPreference = await newPreference.save();
@@ -82,6 +94,10 @@ export async function PATCH(req: NextRequest) {
         productCategories: preferenceData.productCategories || [],
         primaryMarkets: preferenceData.regions || [],
         customTags: preferenceData.customTags || [],
+        materials_norm: normalizeArray(preferenceData.materials || []),
+        productCategories_norm: normalizeArray(preferenceData.productCategories || []),
+        primaryMarkets_norm: normalizeArray(preferenceData.regions || []),
+        customTags_norm: normalizeArray(preferenceData.customTags || []),
       },
       { upsert: true, new: true }
     );
