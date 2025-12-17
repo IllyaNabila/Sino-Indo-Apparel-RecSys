@@ -32,6 +32,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import axios from "axios";
 import { useSocket } from "@/context/SocketContext";
+import { useBusiness } from "@/context/BusinessContext";
 
 interface Message {
   id: string;
@@ -64,6 +65,20 @@ interface SearchResult {
   products?: number;
 }
 
+interface RecResult {
+  productId: string;
+  businessId: string;
+  name: string;
+  material: string;
+  category: string;
+  country?: string
+  score: number;
+  similarity: number;
+  hard: number;
+  pref: number;
+  explanation: string;
+}
+
 interface FilterSuggestion {
   label: string;
   action: string;
@@ -71,6 +86,7 @@ interface FilterSuggestion {
 }
 
 export default function SearchPage() {
+  const { businessId, businessObject } = useBusiness();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -98,6 +114,8 @@ export default function SearchPage() {
   const [showChatModal, setShowChatModal] = useState(false);
   const [displayProduct, setDisplayProduct] = useState(false);
   const [viewProduct, setViewProduct] = useState(Object);
+  const [recommendResult, setRecommendResult] = useState<RecResult[]>();
+  const [recProducts, setFetchRecProduct] = useState<any>();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -221,7 +239,7 @@ export default function SearchPage() {
   ];
 
   const processQuery = async (query: string): Promise<Message> => {
-    const products = await getProduct(query);
+    const products = await fetchRecProducts(query);
     return {
       id: Date.now().toString(),
       type: "assistant",
@@ -523,6 +541,72 @@ const processNLPQuery = async (query: string): Promise<Message> => {
     filters,
   };
 };*/
+  }
+
+  const getRecommendation = async (query: string) => {
+    try {
+      const res = await fetch("/api/recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query,
+          userId: businessId,
+          userRole: businessObject.role,
+        }),
+      });
+
+      const data = await res.json();
+      console.log(res)
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(
+          errorData.message || `HTTP error! status: ${res.status}`
+        );
+      }
+      setRecommendResult(data.matches);
+      console.log(data)
+      return data.matches;
+    } catch (error: any) {
+      console.error("Failed to recommend products:", error);
+      throw new Error("Unable to recommend products right now.");
+    }
+  }
+
+  const fetchRecProducts = async (query: string) => {
+    try {
+      const recommendedRes = await getRecommendation(query);
+      if (!recommendedRes || recommendedRes.length === 0) {
+        console.error("No recommendations available.");
+        return;
+      }
+
+      const productIds = recommendedRes.map((rec: any) => rec.productId);
+      const [res, ratingRes] = await Promise.all([
+        axios.post("/api/products/batch", productIds),
+        axios.post("/api/feedback/productRating", { productIds }),
+      ]);
+
+      if (res.status !== 200 ) {
+        throw new Error("Failed to fetch products in batch.");
+      }
+
+      const ratings = ratingRes.data.productRatingSummary || [];
+
+      // Merge the similarity score from recommendedRes into the product data
+      const products = res.data.map((p: any) => {
+        const rec = recommendedRes.find((r: any) => r.productId === p._id);
+        const ratingData = ratings.find((r: any) => r._id === p._id);
+        return {
+          ...p,
+          relevanceScore: rec ? Math.round(rec.similarity * 100) : 0,
+          rating: ratingData ? ratingData.avgProductRating : 0,
+        };
+      });
+      setFetchRecProduct(products); // Update state with fetched products
+      return products;
+    } catch (error: any) {
+      console.error("Error fetching recommended products:", error);
+    }
   }
 
   const getProduct = async (query: string) => {
@@ -880,7 +964,9 @@ const processNLPQuery = async (query: string): Promise<Message> => {
                               {product.description}
                             </p>
                           </div>
-                          {/**<Badge className="bg-blue-500 text-white text-xs">{product.relevanceScore}% match</Badge>**/}
+                          {product.relevanceScore > 0 && (
+                            <Badge className="bg-blue-500 text-white text-xs">{product.relevanceScore}% match</Badge>
+                          )}
                         </div>
                         <div className="flex items-center justify-between mt-2">
                           <div className="flex items-center space-x-4 text-sm">
@@ -893,18 +979,18 @@ const processNLPQuery = async (query: string): Promise<Message> => {
 
                             <div className="flex items-center">
                               <MapPin className="h-3 w-3 mr-1" />
-                              {product.businessId?.country}
+                              {`${product.businessId?.address}, ${product.businessId?.country}`}
                             </div>
                           </div>
-                          {/**
+                          
                           <div className="flex items-center space-x-2">
                             <div className="flex items-center">
                               <Star className="h-3 w-3 text-yellow-400 fill-current" />
                               <span className="text-xs ml-1">{product.rating}</span>
                             </div>
-                            {product.verified && <CheckCircle className="h-3 w-3 text-emerald-600" />}
+                            {/**{product.verified && <CheckCircle className="h-3 w-3 text-emerald-600" />}*/}
                           </div>
-                          */}
+                          
                         </div>
                         {/**
                         <div className="flex flex-wrap gap-1 mt-2">
