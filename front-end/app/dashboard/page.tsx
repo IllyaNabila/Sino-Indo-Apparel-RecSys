@@ -133,9 +133,9 @@ type RecommendedCompany = {
 
 type DashboardAnalyticsResponse = {
   charts?: {
-    trendData?: ChartJsData;
-    regionData?: ChartJsData;
-    seasonalData?: ChartJsData;
+    trends?: ChartJsData;
+    regional?: ChartJsData;
+    seasonal?: ChartJsData;
   };
   recentActivity?: RecentActivityItem[];
   recommendedProducts?: RecommendedProduct[];
@@ -156,16 +156,26 @@ export default function DashboardPage() {
   const [loadingDash, setLoadingDash] = useState(false);
   const [dashError, setDashError] = useState<string | null>(null);
   
-const scrollRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
-const scroll = (direction: "left" | "right") => {
-  if (!scrollRef.current) return
-  const scrollAmount = 300
-  scrollRef.current.scrollBy({
-    left: direction === "left" ? -scrollAmount : scrollAmount,
-    behavior: "smooth",
-  })
-}
+  const scroll = (direction: "left" | "right") => {
+    if (!scrollRef.current) return
+    const scrollAmount = 300
+    scrollRef.current.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    })
+  }
+
+  const companyScrollRef = useRef<HTMLDivElement>(null)
+
+  const scrollCompanies = (direction: "left" | "right") => {
+    if (!companyScrollRef.current) return
+    companyScrollRef.current.scrollBy({
+      left: direction === "left" ? -300 : 300,
+      behavior: "smooth",
+    })
+  }
 
   const fetchDashboard = async () => {
     try {
@@ -176,6 +186,7 @@ const scroll = (direction: "left" | "right") => {
         params: { country, region, season, demographic },
         withCredentials: true,
       });
+      console.log(res)
 
       setDash(res.data);
     } catch (err: any) {
@@ -196,6 +207,63 @@ const scroll = (direction: "left" | "right") => {
     }
   };
 
+  const palette = [
+    { bg: "rgba(59,130,246,0.5)", border: "rgb(59,130,246)" }, // blue
+    { bg: "rgba(236,72,153,0.5)", border: "rgb(236,72,153)" }, // pink
+    { bg: "rgba(16,185,129,0.5)", border: "rgb(16,185,129)" }, // green
+    { bg: "rgba(99,102,241,0.5)", border: "rgb(99,102,241)" }, // indigo
+  ];
+
+  const withColors = (incoming: any, fallback: any) => {
+    if (!incoming?.datasets) return fallback;
+    return {
+      ...fallback,
+      ...incoming,
+      datasets: incoming.datasets.map((ds: any, i: number) => {
+        const colors = palette[i % palette.length];
+        return {
+          ...fallback.datasets?.[i], // keep other defaults like labels
+          ...ds,
+          backgroundColor: ds.backgroundColor ?? colors.bg,
+          borderColor: ds.borderColor ?? colors.border,
+        };
+      }),
+    };
+  };
+
+  const withColorsPie = (incoming: any, fallback: any) => {
+    if (!incoming?.datasets) return fallback;
+
+    const merged = {
+      ...fallback,
+      ...incoming,
+    };
+
+    return {
+      ...merged,
+      datasets: incoming.datasets.map((ds: any, i: number) => {
+        const base = palette[i % palette.length]; // used for non-pie charts
+
+        // For pie/doughnut charts: color per slice
+        const isArrayData = Array.isArray(ds.data);
+        const sliceBg = isArrayData
+          ? ds.data.map((_: any, j: number) => palette[j % palette.length].bg)
+          : base.bg;
+
+        const sliceBorder = isArrayData
+          ? ds.data.map((_: any, j: number) => palette[j % palette.length].border)
+          : base.border;
+
+        return {
+          ...fallback.datasets?.[i],   // keep fallback defaults if any
+          ...ds,
+          backgroundColor: ds.backgroundColor ?? sliceBg,
+          borderColor: ds.borderColor ?? sliceBorder,
+        };
+      }),
+    };
+  };
+
   // ✅ Load analytics whenever filters change
   useEffect(() => {
     fetchDashboard();
@@ -203,16 +271,16 @@ const scroll = (direction: "left" | "right") => {
   }, [country, region, season, demographic]);
 
   // ✅ Use API data if available, otherwise fallback to mock
-  const trendData = useMemo(
-    () => dash?.charts?.trendData ?? TREND_DATA,
+  const trends = useMemo(
+    () => withColors(dash?.charts?.trends, TREND_DATA),
     [dash]
   );
-  const regionData = useMemo(
-    () => dash?.charts?.regionData ?? REGION_DATA,
+  const regional = useMemo(
+    () => withColorsPie(dash?.charts?.regional, REGION_DATA),
     [dash]
   );
-  const seasonalData = useMemo(
-    () => dash?.charts?.seasonalData ?? SEASONAL_DATA,
+  const seasonal = useMemo(
+    () => withColors(dash?.charts?.seasonal, SEASONAL_DATA),
     [dash]
   );
 
@@ -228,6 +296,16 @@ const scroll = (direction: "left" | "right") => {
     () => dash?.recommendedCompanies ?? [],
     [dash]
   );
+
+  const getInitials = (name: string) => {
+    if (!name) return "?"
+    return name
+      .split(" ")
+      .slice(0, 2)
+      .map(word => word[0])
+      .join("")
+      .toUpperCase()
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -272,14 +350,14 @@ const scroll = (direction: "left" | "right") => {
                 <CardTitle>Recent Activity</CardTitle>
                 <CardDescription>Your latest business updates</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 overflow-y-auto h-[14vh]">
                 {loadingDash && recentActivity.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Loading…</p>
                 ) : (
                   recentActivity.map((activity, index) => (
                     <div
                       key={index}
-                      className="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-50"
+                      className="flex items-start space-x-3 p-3 border-1 rounded-lg hover:bg-slate-50"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-slate-800">
@@ -338,7 +416,7 @@ const scroll = (direction: "left" | "right") => {
                         className="
                           snap-start
                           shrink-0
-                          flex items-center space-x-3
+                          flex items-center space-x-3 border-1
                           p-3 rounded-lg hover:bg-slate-50
                           w-[75vw] sm:w-[320px] md:w-[260px] lg:w-[240px]
                         "
@@ -398,17 +476,60 @@ const scroll = (direction: "left" | "right") => {
                 <CardDescription>
                   Companies you might want to connect with
                 </CardDescription>
-              </CardHeader>              <CardContent className="space-y-4 overflow-y-auto h-[10vh]">
-                {loadingDash && recommendedCompanies.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Loading…</p>
-                ) : (
-                  recommendedCompanies.map((company, index) => (
+              </CardHeader>
+
+              <div className="relative">
+                {/* Left arrow */}
+                <button
+                  onClick={() => scrollCompanies("left")}
+                  className="
+                    absolute -left-3 top-1/2 -translate-y-1/2
+                    z-10 bg-white shadow rounded-full p-2
+                    hidden md:flex
+                  "
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+
+                {/* Scroll container */}
+                <CardContent
+                  ref={companyScrollRef}
+                  className="
+                    flex gap-4
+                    overflow-x-auto overflow-y-hidden
+                    snap-x snap-mandatory scroll-smooth
+                    px-14 py-2
+                    h-[14vh]
+                    no-scrollbar
+                  "
+                >
+                  {loadingDash && recommendedCompanies.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Loading…</p>
+                  ) : (
+                    recommendedCompanies.map((company, index) => (
                     <div
                       key={index}
-                      className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50"
+                      className="
+                        snap-start shrink-0
+                        flex items-center space-x-3 border-1
+                        p-3 rounded-lg hover:bg-slate-50
+                        w-[75vw] sm:w-[320px] md:w-[260px] lg:w-[240px]
+                      "
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-800">
+                      {/* Initials avatar */}
+                      <div className="
+                        w-10 h-10 rounded-full
+                        bg-slate-200 text-slate-700
+                        flex items-center justify-center
+                        text-sm font-semibold
+                        shrink-0
+                      ">
+                        {getInitials(company.name)}
+                      </div>
+
+                      {/* Company info */}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-800 truncate">
                           {company.name}
                         </p>
                         <p className="text-xs text-slate-500">
@@ -419,12 +540,23 @@ const scroll = (direction: "left" | "right") => {
                         </p>
                       </div>
                     </div>
-                  ))
-                )}{/**
-                <Button variant="outline" className="w-full">
-                  View All Partners
-                </Button> */}
-              </CardContent>
+
+                    ))
+                  )}
+                </CardContent>
+
+                {/* Right arrow */}
+                <button
+                  onClick={() => scrollCompanies("right")}
+                  className="
+                    absolute -right-3 top-1/2 -translate-y-1/2
+                    z-10 bg-white shadow rounded-full p-2
+                    hidden md:flex
+                  "
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </div>
             </Card>
           </div>
         </div>
@@ -467,7 +599,7 @@ const scroll = (direction: "left" | "right") => {
                 </CardHeader>
                 <CardContent className="h-[400px]">
                   <BarChart
-                    data={trendData}
+                    data={trends}
                     options={{
                       responsive: true,
                       maintainAspectRatio: false,
@@ -488,7 +620,7 @@ const scroll = (direction: "left" | "right") => {
                 </CardHeader>
                 <CardContent className="h-[400px]">
                   <PieChart
-                    data={regionData}
+                    data={regional}
                     options={{
                       responsive: true,
                       maintainAspectRatio: false,
@@ -509,7 +641,7 @@ const scroll = (direction: "left" | "right") => {
                 </CardHeader>
                 <CardContent className="h-[400px]">
                   <LineChart
-                    data={seasonalData}
+                    data={seasonal}
                     options={{
                       responsive: true,
                       maintainAspectRatio: false,
