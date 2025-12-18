@@ -23,6 +23,7 @@ type LeanBusinessDoc = {
   _id: Types.ObjectId;
   companyName?: string | null;
   country?: string | null;
+  address?: string | null;
   role?: string | null;
   verified?: boolean | null;
 };
@@ -52,6 +53,7 @@ interface LeanBusiness {
   _id: mongoose.Types.ObjectId;
   companyName?: string;
   country?: string;
+  address?: string;
   role?: string;
   verified?: boolean;
 }
@@ -150,13 +152,15 @@ export async function getDashboardAnalytics(
   const bid = toObjectId(businessId);
 
     const business = (await Business.findById(bid)
-    .select({ role: 1, country: 1, companyName: 1, verified: 1 })
+    .select({ role: 1, country: 1, address: 1, companyName: 1, verified: 1 })
     .lean()) as LeanBusinessDoc | null;
 
     const role = business?.role ?? null;
-
+    const country = business?.country ?? null;
+    const address = business?.address ?? null;
+    
   // Country filter is possible because Business has country :contentReference[oaicite:6]{index=6}
-  const country = filters.country && filters.country !== "all" ? filters.country : null;
+  // const country = filters.country && filters.country !== "all" ? filters.country : null;
 
   // Season filter is derived from timestamps (you don't store season in DB)
   const monthsForSeason = seasonFilterToMonths(filters.season);
@@ -305,21 +309,28 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
   // Recommend companies: opposite role + verified + (optional) in preferred markets (mapped to Business.country)
   const oppositeRole =
     role === "importer" ? "manufacturer" : role === "manufacturer" ? "importer" : null;
+  const oppositeCountry =
+    country === "indonesia" ? "china" : country === "china" ? "indonesia" : null;
 
+    //Build a MongoDB filter
   const companyMatch: FilterQuery<typeof Business> = { _id: { $ne: bid }, verified: true }; // Business.verified :contentReference[oaicite:17]{index=17}
   if (oppositeRole) companyMatch.role = oppositeRole;
-  if (country) companyMatch.country = new RegExp(`^${country}$`, "i");
+  if (oppositeCountry) companyMatch.country = new RegExp(`^${oppositeCountry}$`, "i");
 
-  // If user has primaryMarkets, use them as a country allowlist
+  // If user has primaryMarkets, restrict by them
   if (pref?.primaryMarkets?.length) {
-    companyMatch.country = { $in: pref.primaryMarkets };
+    companyMatch.address = { $in: pref.primaryMarkets };
   }
+  console.log(companyMatch);
 
+  //Fetch the companies
   const companies = await Business.find(companyMatch)
     .sort({ updatedAt: -1 })
     .limit(6)
     .lean();
+  console.log(companies);
 
+  //Count products for each company
   const companyIds = companies.map((c: any) => c._id);
   const productCounts = await Product.aggregate([
     { $match: { businessId: { $in: companyIds } } },
@@ -327,14 +338,16 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
   ]);
   const countMap = new Map<string, number>(productCounts.map((r) => [String(r._id), r.count]));
 
+  //Merge into final response shape
   const recommendedCompanies: DashboardAnalyticsResponse["recommendedCompanies"] =
     (companies as unknown as LeanBusiness[]).map((c) => ({
       name: c.companyName ?? "Unknown",
       type: c.role === "manufacturer" ? "Manufacturer" : "Importer",
-      location: c.country ?? "Unknown",
+      location: c.address ?? "Unknown",
       verified: !!c.verified,
       products: countMap.get(String(c._id)) ?? 0,
     }));
+  console.log(recommendedCompanies);
 
   // ---------- Charts ----------
   // Your UI expects TREND_DATA / REGION_DATA / SEASONAL_DATA shapes :contentReference[oaicite:18]{index=18} :contentReference[oaicite:19]{index=19}
@@ -358,7 +371,7 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
       },
     },
     { $unwind: "$biz" },
-    ...(country ? [{ $match: { "biz.country": new RegExp(`^${country}$`, "i") } }] : []),
+    ...(oppositeCountry ? [{ $match: { "biz.country": new RegExp(`^${oppositeCountry}$`, "i") } }] : []),
     ...(monthsForSeason
       ? [
           {
@@ -382,6 +395,7 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
       },
     },
   ]);
+  console.log(trendRows);
 
   // Build month labels = last 6 months
   const monthLabels: string[] = [];
@@ -406,20 +420,23 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
         }))
       : [{ label: "No Data", data: monthNums.map(() => 0) }],
   };
+  console.log(trends);
 
   // Regional: you don’t store region; so we return distribution by Business.country (market share proxy)
-  const countryDist = await Business.aggregate<{ country: string; count: number }>([
-    { $match: country ? { country: new RegExp(`^${country}$`, "i") } : {} },
-    { $group: { _id: { $ifNull: ["$country", "Unknown"] }, count: { $sum: 1 } } },
-    { $project: { _id: 0, country: "$_id", count: 1 } },
+  const countryDist = await Business.aggregate<{ address: string; count: number }>([
+    { $match: oppositeCountry ? { country: new RegExp(`^${oppositeCountry}$`, "i") } : {} },
+    { $group: { _id: { $ifNull: ["$address", "Unknown"] }, count: { $sum: 1 } } },
+    { $project: { _id: 0, address: "$_id", count: 1 } },
     { $sort: { count: -1 } },
     { $limit: 8 },
   ]);
+  console.log(countryDist);
 
   const regional: PieData = {
-    labels: countryDist.length ? countryDist.map((r) => r.country) : ["No Data"],
+    labels: countryDist.length ? countryDist.map((r) => r.address) : ["No Data"],
     datasets: [{ label: "Market Share", data: countryDist.length ? countryDist.map((r) => r.count) : [1] }],
   };
+  console.log(regional);
 
   // Seasonal: counts per season for the same top categories
   const seasonalRows = await Product.aggregate<{ season: string; category: string; count: number }>([
@@ -433,7 +450,7 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
       },
     },
     { $unwind: "$biz" },
-    ...(country ? [{ $match: { "biz.country": new RegExp(`^${country}$`, "i") } }] : []),
+    ...(oppositeCountry ? [{ $match: { "biz.country": new RegExp(`^${oppositeCountry}$`, "i") } }] : []),
     {
       $addFields: { month: { $month: "$createdAt" } },
     },
@@ -461,6 +478,7 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
     },
     { $project: { _id: 0, season: "$_id.season", category: "$_id.category", count: 1 } },
   ]);
+  console.log(seasonalRows);
 
   const seasons = ["Spring", "Summer", "Fall", "Winter"] as const;
   const seasonal: ChartData = {
@@ -472,6 +490,7 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
         }))
       : [{ label: "No Data", data: seasons.map(() => 0) }],
   };
+  console.log(seasonal);
 
   return {
     stats,
