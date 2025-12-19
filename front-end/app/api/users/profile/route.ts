@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
         address: business.address,
         phoneNumber: business.phoneNumber,
         website: business.website,
+        preferredLanguage: business.preferredLanguage
       },
       licenseStatus: {
         status: license?.verificationStatus || "none",
@@ -52,7 +53,7 @@ export async function PATCH(request: NextRequest) {
     const userId = decoded.id;
 
     const reqBody = await request.json();
-    const { companyName, registrationNumber, address, phoneNumber, website, description } = reqBody;
+    const { companyName, registrationNumber, address, phoneNumber, website, description, preferredLanguage } = reqBody;
 
     const updatedBusiness = await Business.findOneAndUpdate(
       { submittedBy: userId },
@@ -63,6 +64,7 @@ export async function PATCH(request: NextRequest) {
         phoneNumber,
         website,
         description,
+        preferredLanguage
       },
       { new: true }
     );

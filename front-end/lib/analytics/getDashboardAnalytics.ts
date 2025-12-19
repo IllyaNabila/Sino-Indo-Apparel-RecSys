@@ -39,9 +39,9 @@ type LeanLicenseDoc = {
 };
 
 type LeanPreferenceDoc = {
-  primaryMarkets?: string[];        // defaults [] :contentReference[oaicite:4]{index=4}
-  productCategories?: string[];     // defaults [] :contentReference[oaicite:5]{index=5}
-  materials?: string[];             // defaults [] :contentReference[oaicite:6]{index=6}
+  primaryMarkets_norm?: string[];        // defaults [] :contentReference[oaicite:4]{index=4}
+  productCategories_norm?: string[];     // defaults [] :contentReference[oaicite:5]{index=5}
+  materials_norm?: string[];             // defaults [] :contentReference[oaicite:6]{index=6}
 };
 
 type LeanMessageDoc = {
@@ -269,7 +269,7 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
 
   // ---------- Recommendations (based on Preference + Product + Business role) ----------
   const pref = (await Preference.findOne({ businessId: bid })
-  .select({ primaryMarkets: 1, productCategories: 1, materials: 1 })
+  .select({ primaryMarkets_norm: 1, productCategories_norm: 1, materials_norm: 1 })
   .lean()) as LeanPreferenceDoc | null;
 
   // Opposite listing type (your products have listingType) :contentReference[oaicite:12]{index=12}
@@ -282,13 +282,13 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
   if (desiredListingType) productMatch.listingType = desiredListingType;
 
   // preference matching (category/material)
-  const categoryFilter = pref?.productCategories?.length ? { $in: pref.productCategories } : null;
-  const materialFilter = pref?.materials?.length ? { $in: pref.materials } : null;
+  const categoryFilter = pref?.productCategories_norm?.length ? { $in: pref.productCategories_norm } : null;
+  const materialFilter = pref?.materials_norm?.length ? { $in: pref.materials_norm } : null;
 
   if (categoryFilter || materialFilter) {
     productMatch.$or = [];
-    if (categoryFilter) productMatch.$or.push({ category: categoryFilter });
-    if (materialFilter) productMatch.$or.push({ material: materialFilter });
+    if (categoryFilter) productMatch.$or.push({ category_norm: categoryFilter });
+    if (materialFilter) productMatch.$or.push({ material_norm: materialFilter });
   }
 
   const matchedProducts = await Product.find(productMatch)
@@ -296,6 +296,7 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
     .limit(6)
     .populate({ path: "businessId", select: "companyName" })
     .lean();
+  console.log("matchedProducts",matchedProducts)
 
   const recommendedProducts: DashboardAnalyticsResponse["recommendedProducts"] =
     (matchedProducts as unknown as LeanProduct[]).map((p) => ({
@@ -318,8 +319,8 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
   if (oppositeCountry) companyMatch.country = new RegExp(`^${oppositeCountry}$`, "i");
 
   // If user has primaryMarkets, restrict by them
-  if (pref?.primaryMarkets?.length) {
-    companyMatch.address = { $in: pref.primaryMarkets };
+  if (pref?.primaryMarkets_norm?.length) {
+    companyMatch.address = { $in: pref.primaryMarkets_norm };
   }
   console.log(companyMatch);
 

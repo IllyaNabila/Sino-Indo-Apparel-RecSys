@@ -7,18 +7,30 @@ const messageSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "conversations",
       required: true,
+      index: true
     },
     senderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "businesses",
       required: true,
+      index: true
     },
     receiverId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "businesses",
       required: true,
+      index: true 
     },
-    content: { type: String, required: true },
+    content: { type: String },
+    text: {
+      original: { type: String },
+      sourceLang: { type: String }, // "en" | "id" | "zh"
+      translations: {
+        type: Map,
+        of: String,
+        default: {},
+      },
+    },
     sentAt: {
       type: Date,
       default: Date.now,

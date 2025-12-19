@@ -10,6 +10,11 @@ const businessSchema = new mongoose.Schema({
   website: String,
   description: String,
   role: String,
+  preferredLanguage: {
+    type: String,
+    enum: ["en", "id", "zh"],
+    default: "en",
+  },
   verified: {
     type: Boolean,
     default: false,

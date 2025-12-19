@@ -3,6 +3,9 @@ import Conversation from "@/models/conversationModel";
 import Message from "@/models/messageModel";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
+import Business from "@/models/businessModel";
+import { detectLang, translateText } from "@/lib/translation";
+import { translateWithHF } from "@/lib/hftranslation";
 
 connect();
 
@@ -40,11 +43,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json("Conversation not found", { status: 400 });
     }
 
+    const receiver = await Business.findById(receiverId);
+    if (!receiver) {
+      return NextResponse.json(
+        { error: "Receiver not found" },
+        { status: 404 }
+      );
+    }
+
+    const sourceLang = await detectLang(content);
+    const receiverLang = receiver.preferredLanguage;
+
+    const translations: Record<string, string> = {};
+
+     if (receiverLang !== sourceLang) {
+        const translatedText = await translateText(
+          content,
+          sourceLang,
+          receiverLang
+        );
+        translations[receiverLang] = translatedText;
+      }
+
     const message = await Message.create({
       conversationId: conversation._id,
       senderId,
       receiverId,
       content,
+      text: {
+        original: content,
+        sourceLang,
+        translations,
+      },
+      sentAt: new Date(),
     });
 
     await Conversation.findByIdAndUpdate(conversation._id, {

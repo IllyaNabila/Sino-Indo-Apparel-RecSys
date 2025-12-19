@@ -4,7 +4,21 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { Package } from "lucide-react";
 
-export const ChatMessageContent = ({ content }: { content: string }) => {
+type ChatMessageContentProps = {
+  content: string;
+  original?: string;
+  translatedText?: string;
+  sourceLang?: string;
+  targetLang?: string;
+};
+
+export const ChatMessageContent = ({
+  content,
+  original,
+  translatedText,
+  sourceLang,
+  targetLang,
+}: ChatMessageContentProps) => {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
@@ -32,6 +46,14 @@ export const ChatMessageContent = ({ content }: { content: string }) => {
   return (
     <div>
       <p className="text-sm whitespace-pre-wrap">{content}</p>
+      {translatedText && original && translatedText !== original && (
+        <div className="mt-2 border-t border-white/20 pt-2">
+          <p className="text-xs opacity-70">
+            Original{sourceLang ? ` (${sourceLang})` : ""}:
+          </p>
+          <p className="text-xs whitespace-pre-wrap opacity-80">{original}</p>
+        </div>
+      )}
       {loading && <p className="text-xs mt-2 italic">Loading product...</p>}
       {product && (
         <div className="mt-2 border-t border-white/20 pt-2">
