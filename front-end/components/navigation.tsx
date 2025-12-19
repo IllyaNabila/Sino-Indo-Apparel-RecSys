@@ -32,14 +32,23 @@ export default function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const isVerified = !!businessObject?.verified;
-  const navigationItems = [
+  const navigationItems = isVerified ? [
+    { name: "Search", href: "/search", icon: Search },
     { name: "Dashboard", href: "/dashboard", icon: Home },
     { name: "Products", href: "/products", icon: Package },
     { name: "Messages", href: "/chat", icon: MessageSquare, badge: Object.values(unreadCounts).filter((count) => count > 0).length },
-    { name: "Search", href: "/search", icon: Search },
     //{ name: "Partners", href: "/partners", icon: Users },
-    { name: "Feedback", href: "/feedback", icon: MessageSquare },
-  ];
+    //{ name: "Feedback", href: "/feedback", icon: MessageSquare },
+  ] :
+  [
+    { name: "Search", href: "/search", icon: Search },
+    { name: "Dashboard", href: "/dashboard", icon: Home },
+    { name: "Products", href: "/products", icon: Package },
+    //{ name: "Messages", href: "/chat", icon: MessageSquare, badge: Object.values(unreadCounts).filter((count) => count > 0).length },
+    //{ name: "Partners", href: "/partners", icon: Users },
+    //{ name: "Feedback", href: "/feedback", icon: MessageSquare },
+  ]
+  ;
 
   const isActive = (href: string) => pathname === href;
 

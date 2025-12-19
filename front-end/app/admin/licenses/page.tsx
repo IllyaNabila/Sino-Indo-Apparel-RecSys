@@ -442,7 +442,7 @@ export default function AdminLicensesPage() {
   console.log(licenseSubmissionDB);
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
+      {/* Header 
       <header className="bg-white border-b px-6 py-4"> 
         <div className="flex items-center justify-between">
           <div>
@@ -464,7 +464,7 @@ export default function AdminLicensesPage() {
             </Badge>
           </div>
         </div>
-      </header>
+      </header>*/}
 
       <div className="p-6">
         <Tabs
@@ -473,12 +473,13 @@ export default function AdminLicensesPage() {
           onValueChange={(value) => setVerificationStatus(value)}
           className="space-y-6"
         >
+          {/**
           <TabsList>
             <TabsTrigger value="pending">Pending Review ({pendingCount}) </TabsTrigger>
             <TabsTrigger value="all">All Submissions</TabsTrigger>
             <TabsTrigger value="approved">Approved</TabsTrigger>
             <TabsTrigger value="rejected">Rejected</TabsTrigger>
-          </TabsList>
+          </TabsList> */}
 
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
             {/* Search */}
@@ -494,7 +495,13 @@ export default function AdminLicensesPage() {
 
             {/* Filters */}
             <div className="flex flex-wrap gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value)
+                  setVerificationStatus(value)
+                }}
+              >
                 <SelectTrigger className="w-[150px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Status" />
@@ -506,7 +513,7 @@ export default function AdminLicensesPage() {
                   <SelectItem value="rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
-
+              {/**
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                 <SelectTrigger className="w-[150px]">
                   <AlertTriangle className="h-4 w-4 mr-2" />
@@ -518,7 +525,7 @@ export default function AdminLicensesPage() {
                   <SelectItem value="normal">Normal Priority</SelectItem>
                   <SelectItem value="low">Low Priority</SelectItem>
                 </SelectContent>
-              </Select>
+              </Select> */}
 
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[180px]">
@@ -530,7 +537,7 @@ export default function AdminLicensesPage() {
                   <SelectItem value="date-asc">Oldest First</SelectItem>
                   <SelectItem value="company-asc">Company (A-Z)</SelectItem>
                   <SelectItem value="company-desc">Company (Z-A)</SelectItem>
-                  <SelectItem value="priority-high">Priority (High-Low)</SelectItem>
+                  {/**<SelectItem value="priority-high">Priority (High-Low)</SelectItem>*/}
                 </SelectContent>
               </Select>
             </div>
@@ -738,7 +745,7 @@ export default function AdminLicensesPage() {
                   variant="outline"
                   onClick={() => {
                     setIsPreviewDialogOpen(false)
-                    if (previewSubmission) {
+                    if (previewSubmissionDB) {
                       openRejectionDialog(previewSubmissionDB._id)
                     }
                   }}
@@ -749,9 +756,10 @@ export default function AdminLicensesPage() {
                 </Button>
                 <Button
                   onClick={() => {
-                    if (previewSubmission) {
+                    if (previewSubmissionDB) {
                       handleApproveDB(previewSubmissionDB._id)
                       setIsPreviewDialogOpen(false)
+                      console.log("click")
                     }
                   }}
                   className="bg-emerald-600 hover:bg-emerald-700"
@@ -901,11 +909,10 @@ function SubmissionCardDB({ submission, onApprove, onReject, onPreview }: Submis
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center">
+              <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-slate-800">{submission.businessId.companyName}</h3>
-                {submission.verificationStatus === "pending"}
+                {getStatusBadge(submission.verificationStatus)}
               </div>
-              <div>{getStatusBadge(submission.verificationStatus)}</div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
               <div className="flex items-center text-slate-600">
