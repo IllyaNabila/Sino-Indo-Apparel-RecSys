@@ -116,6 +116,7 @@ export default function SearchPage() {
   const [viewProduct, setViewProduct] = useState(Object);
   const [recommendResult, setRecommendResult] = useState<RecResult[]>();
   const [recProducts, setFetchRecProduct] = useState<any>();
+  const isVerified = businessObject?.verified === true;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -816,14 +817,16 @@ const processNLPQuery = async (query: string): Promise<Message> => {
                       <Button variant="outline" size="sm" className="flex-1">
                         View Details
                       </Button>
-                      <Button
-                        size="sm"
-                        className="flex-1 bg-rose-500 hover:bg-rose-600"
-                        onClick={() => handleStartChat(product)}
-                      >
-                        <MessageSquare className="h-3 w-3 mr-1" />
-                        Chat
-                      </Button>
+                      {isVerified && (
+                        <Button
+                          size="sm"
+                          className="flex-1 bg-rose-500 hover:bg-rose-600"
+                          onClick={() => handleStartChat(product)}
+                        >
+                          <MessageSquare className="h-3 w-3 mr-1" />
+                          Chat
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -901,14 +904,16 @@ const processNLPQuery = async (query: string): Promise<Message> => {
                           <Button variant="outline" size="sm">
                             View Profile
                           </Button>
-                          <Button
-                            size="sm"
-                            className="bg-rose-500 hover:bg-rose-600"
-                            onClick={() => handleStartChat(partner)}
-                          >
-                            <MessageSquare className="h-3 w-3 mr-1" />
-                            Chat
-                          </Button>
+                          {isVerified && (
+                            <Button
+                              size="sm"
+                              className="bg-rose-500 hover:bg-rose-600"
+                              onClick={() => handleStartChat(partner)}
+                            >
+                              <MessageSquare className="h-3 w-3 mr-1" />
+                              Chat
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1015,14 +1020,16 @@ const processNLPQuery = async (query: string): Promise<Message> => {
                       >
                         View Details
                       </Button>
-                      <Button
-                        size="sm"
-                        className="flex-1 bg-rose-500 hover:bg-rose-600"
-                        onClick={() => handleStartChat(product)}
-                      >
-                        <MessageSquare className="h-3 w-3 mr-1" />
-                        Chat
-                      </Button>
+                      {isVerified && (
+                        <Button
+                          size="sm"
+                          className="flex-1 bg-rose-500 hover:bg-rose-600"
+                          onClick={() => handleStartChat(product)}
+                        >
+                          <MessageSquare className="h-3 w-3 mr-1" />
+                          Chat
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1087,14 +1094,16 @@ const processNLPQuery = async (query: string): Promise<Message> => {
                           <Button variant="outline" size="sm">
                             View Profile
                           </Button>
-                          <Button
-                            size="sm"
-                            className="bg-rose-500 hover:bg-rose-600"
-                            onClick={() => handleStartChat(partner)}
-                          >
-                            <MessageSquare className="h-3 w-3 mr-1" />
-                            Chat
-                          </Button>
+                          {isVerified && (
+                            <Button
+                              size="sm"
+                              className="bg-rose-500 hover:bg-rose-600"
+                              onClick={() => handleStartChat(partner)}
+                            >
+                              <MessageSquare className="h-3 w-3 mr-1" />
+                              Chat
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
