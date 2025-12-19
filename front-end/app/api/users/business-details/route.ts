@@ -27,8 +27,24 @@ export async function POST(request: NextRequest) {
       phoneNumber,
       website,
       description,
+      preferredLanguage: requestedPreferredLanguage,
     } = reqBody;
     console.log(reqBody);
+
+    const allowedPreferredLanguages = new Set(["en", "id", "zh"]);
+
+    let preferredLanguage =
+      country === "china" ? "zh" : country === "indonesia" ? "id" : "en";
+
+    if (requestedPreferredLanguage !== undefined) {
+      if (!allowedPreferredLanguages.has(requestedPreferredLanguage)) {
+        return NextResponse.json(
+          { error: "Invalid preferredLanguage" },
+          { status: 400 }
+        );
+      }
+      preferredLanguage = requestedPreferredLanguage;
+    }
 
     //check if business exists
     const business = await Business.findOne({
@@ -52,6 +68,7 @@ export async function POST(request: NextRequest) {
       website,
       description,
       role: user.role,
+      preferredLanguage,
       submittedBy: userId,
     });
 

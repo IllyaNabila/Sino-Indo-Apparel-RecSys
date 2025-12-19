@@ -15,11 +15,12 @@ import { ArrowLeft, ArrowRight } from "lucide-react"
 import axios from 'axios';
 
 export default function BusinessDetailsPage() {
-  const { businessId, companyName, setBusinessId, setCompanyName } = useBusiness();
+  const { businessId, companyName, setBusinessId, setCompanyName, setBusinessObject } = useBusiness();
   const router = useRouter()
   const searchParams = useSearchParams()
   const role = searchParams.get("role") || "importer"
 
+  const [languageTouched, setLanguageTouched] = useState(false)
   const [formData, setFormData] = useState({
     companyName: "",
     businessType: "",
@@ -30,6 +31,7 @@ export default function BusinessDetailsPage() {
     phoneNumber: "",
     website: "",
     description: "",
+    preferredLanguage: "en"
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -38,7 +40,23 @@ export default function BusinessDetailsPage() {
   }
 
   const handleSelectChange = (name: string, value: string) => {
+    if (name === "preferredLanguage") {
+      setLanguageTouched(true)
+    }
     setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleCountryChange = (value: string) => {
+    setFormData((prev) => {
+      const next = { ...prev, country: value }
+
+      if (!languageTouched) {
+        next.preferredLanguage =
+          value === "china" ? "zh" : value === "indonesia" ? "id" : "en"
+      }
+
+      return next
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,6 +67,7 @@ export default function BusinessDetailsPage() {
       console.log("Businsess registration success", response.data);
       setBusinessId(response.data.savedBusiness?._id);
       setCompanyName(response.data.savedBusiness?.companyName);
+      setBusinessObject(response.data.savedBusiness);
       router.push(`/auth/license-upload`);
     } catch (error: any) {
       console.log("Business registration failed", error.message);
@@ -126,7 +145,7 @@ export default function BusinessDetailsPage() {
                   <Label htmlFor="country">Country *</Label>
                   <Select
                     value={formData.country}
-                    onValueChange={(value) => handleSelectChange("country", value)}
+                    onValueChange={handleCountryChange}
                     required
                   >
                     <SelectTrigger id="country">
@@ -135,6 +154,26 @@ export default function BusinessDetailsPage() {
                     <SelectContent>
                       <SelectItem value="china">China</SelectItem>
                       <SelectItem value="indonesia">Indonesia</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="preferredLanguage">Preferred Language *</Label>
+                  <Select
+                    value={formData.preferredLanguage}
+                    onValueChange={(value) =>
+                      handleSelectChange("preferredLanguage", value)
+                    }
+                    required
+                  >
+                    <SelectTrigger id="preferredLanguage">
+                      <SelectValue placeholder="Select preferred language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="id">Bahasa Indonesia</SelectItem>
+                      <SelectItem value="zh">中文</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -4,6 +4,8 @@ import jwt from "jsonwebtoken";
 import Conversation from "@/models/conversationModel";
 import Membership from "@/models/conversationMembershipModel";
 import Message from "@/models/messageModel";
+import Business from "@/models/businessModel";
+import { detectLang, translateText } from "@/lib/translation";
 
 connect();
 
@@ -34,11 +36,39 @@ export async function POST(request: NextRequest) {
       ]);
     }
 
+    
+    const receiver = await Business.findById(receiverId);
+    if (!receiver) {
+      return NextResponse.json(
+        { error: "Receiver not found" },
+        { status: 404 }
+      );
+    }
+
+    const sourceLang = await detectLang(content);
+    const receiverLang = receiver.preferredLanguage;
+
+    const translations: Record<string, string> = {};
+
+    if (receiverLang !== sourceLang) {
+      translations[receiverLang] = await translateText(
+        content,
+        sourceLang,
+        receiverLang
+      );
+    }
+
     const message = await Message.create({
       conversationId: conversation._id,
       senderId,
       receiverId,
       content,
+      text: {
+        original: content,
+        sourceLang,
+        translations,
+      },
+      sentAt: new Date(),
     });
 
     await Conversation.findByIdAndUpdate(conversation._id, {

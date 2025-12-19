@@ -37,6 +37,7 @@ import {
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
+import { useBusiness } from "@/context/BusinessContext";
 
 interface SurveyData {
   // Business Information
@@ -52,7 +53,91 @@ interface SurveyData {
   seasonPreferences: string[];
 }
 
+const CHINA_PRIMARY_MARKETS: Array<{ value: string; label: string }> = [
+  { value: "Beijing", label: "Beijing (北京)" },
+  { value: "Shanghai", label: "Shanghai (上海)" },
+  { value: "Tianjin", label: "Tianjin (天津)" },
+  { value: "Chongqing", label: "Chongqing (重庆)" },
+  { value: "Guangxi", label: "Guangxi (广西)" },
+  { value: "Inner Mongolia", label: "Inner Mongolia (内蒙古)" },
+  { value: "Ningxia", label: "Ningxia (宁夏)" },
+  { value: "Tibet / Xizang", label: "Tibet / Xizang (西藏)" },
+  { value: "Xinjiang", label: "Xinjiang (新疆)" },
+  { value: "Hong Kong", label: "Hong Kong (香港)" },
+  { value: "Macau", label: "Macau (澳门)" },
+  { value: "Anhui", label: "Anhui (安徽)" },
+  { value: "Fujian", label: "Fujian (福建)" },
+  { value: "Gansu", label: "Gansu (甘肃)" },
+  { value: "Guangdong", label: "Guangdong (广东)" },
+  { value: "Guizhou", label: "Guizhou (贵州)" },
+  { value: "Hainan", label: "Hainan (海南)" },
+  { value: "Hebei", label: "Hebei (河北)" },
+  { value: "Heilongjiang", label: "Heilongjiang (黑龙江)" },
+  { value: "Henan", label: "Henan (河南)" },
+  { value: "Hubei", label: "Hubei (湖北)" },
+  { value: "Hunan", label: "Hunan (湖南)" },
+  { value: "Jiangsu", label: "Jiangsu (江苏)" },
+  { value: "Jiangxi", label: "Jiangxi (江西)" },
+  { value: "Jilin", label: "Jilin (吉林)" },
+  { value: "Liaoning", label: "Liaoning (辽宁)" },
+  { value: "Qinghai", label: "Qinghai (青海)" },
+  { value: "Shaanxi", label: "Shaanxi (陕西)" },
+  { value: "Shandong", label: "Shandong (山东)" },
+  { value: "Shanxi", label: "Shanxi (山西)" },
+  { value: "Sichuan", label: "Sichuan (四川)" },
+  { value: "Yunnan", label: "Yunnan (云南)" },
+  { value: "Zhejiang", label: "Zhejiang (浙江)" },
+];
+
+const INDONESIA_PRIMARY_MARKETS: Array<{ value: string; label: string }> = [
+  { value: "Aceh", label: "Aceh" },
+  { value: "North Sumatra", label: "North Sumatra" },
+  { value: "West Sumatra", label: "West Sumatra" },
+  { value: "Riau", label: "Riau" },
+  { value: "Riau Islands", label: "Riau Islands" },
+  { value: "Jambi", label: "Jambi" },
+  { value: "Bengkulu", label: "Bengkulu" },
+  { value: "South Sumatra", label: "South Sumatra" },
+  { value: "Bangka Belitung Islands", label: "Bangka Belitung Islands" },
+  { value: "Lampung", label: "Lampung" },
+  { value: "Banten", label: "Banten" },
+  {
+    value: "DKI Jakarta",
+    label: "Special Capital Region of Jakarta (DKI Jakarta)",
+  },
+  { value: "West Java", label: "West Java" },
+  { value: "Central Java", label: "Central Java" },
+  {
+    value: "DI Yogyakarta",
+    label: "Special Region of Yogyakarta (DI Yogyakarta)",
+  },
+  { value: "East Java", label: "East Java" },
+  { value: "Bali", label: "Bali" },
+  { value: "West Nusa Tenggara", label: "West Nusa Tenggara" },
+  { value: "East Nusa Tenggara", label: "East Nusa Tenggara" },
+  { value: "West Kalimantan", label: "West Kalimantan" },
+  { value: "Central Kalimantan", label: "Central Kalimantan" },
+  { value: "South Kalimantan", label: "South Kalimantan" },
+  { value: "East Kalimantan", label: "East Kalimantan" },
+  { value: "North Kalimantan", label: "North Kalimantan" },
+  { value: "North Sulawesi", label: "North Sulawesi" },
+  { value: "Gorontalo", label: "Gorontalo" },
+  { value: "Central Sulawesi", label: "Central Sulawesi" },
+  { value: "West Sulawesi", label: "West Sulawesi" },
+  { value: "South Sulawesi", label: "South Sulawesi" },
+  { value: "Southeast Sulawesi", label: "Southeast Sulawesi" },
+  { value: "Maluku", label: "Maluku" },
+  { value: "North Maluku", label: "North Maluku" },
+  { value: "Papua", label: "Papua" },
+  { value: "West Papua", label: "West Papua" },
+  { value: "Southwest Papua", label: "Southwest Papua" },
+  { value: "Central Papua", label: "Central Papua" },
+  { value: "Highland Papua", label: "Highland Papua" },
+  { value: "South Papua", label: "South Papua" },
+];
+
 export default function SurveyPage() {
+  const { businessObject } = useBusiness();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [customTags, setCustomTags] = useState<string[]>([]);
@@ -70,6 +155,12 @@ export default function SurveyPage() {
 
   const totalSteps = 3;
   const progress = (currentStep / totalSteps) * 100;
+
+  const toCheckboxId = (prefix: string, value: string) =>
+    `${prefix}-${value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")}`;
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
@@ -135,52 +226,62 @@ export default function SurveyPage() {
           <Label className="text-base font-medium mb-2">
             Primary Markets (Select all that apply)
           </Label>
-
-          {/* China Region */}
-          <div className="mt-4">
-            <Label className="text-sm font-semibold text-gray-700">China</Label>
-            <div className="grid grid-cols-2 gap-3 mt-2">
-              {["Mainland China", "Hong Kong", "Macau"].map((market) => (
-                <div key={market} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={market}
-                    checked={surveyData.primaryMarkets.includes(market)}
-                    onCheckedChange={() =>
-                      handleArrayToggle("primaryMarkets", market)
-                    }
-                  />
-                  <Label htmlFor={market} className="text-sm">
-                    {market}
-                  </Label>
+          {businessObject.country === "indonesia" ? (
+            <>
+              {/* China Region */}
+              <div className="mt-4">
+                <Label className="text-sm font-semibold text-gray-700">China</Label>
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  {CHINA_PRIMARY_MARKETS.map((market) => {
+                    const id = toCheckboxId("primaryMarket", market.value);
+                    return (
+                      <div key={market.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={id}
+                        checked={surveyData.primaryMarkets.includes(market.value)}
+                        onCheckedChange={() =>
+                          handleArrayToggle("primaryMarkets", market.value)
+                        }
+                      />
+                      <Label htmlFor={id} className="text-sm">
+                        {market.label}
+                      </Label>
+                    </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            </>
+          ) : businessObject.country === "china" ? (
+            <>
+              {/* Indonesia Region */}
+              <div className="mt-6">
+                <Label className="text-sm font-semibold text-gray-700">
+                  Indonesia
+                </Label>
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  {INDONESIA_PRIMARY_MARKETS.map((market) => {
+                    const id = toCheckboxId("primaryMarket", market.value);
+                    return (
+                      <div key={market.value} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={id}
+                          checked={surveyData.primaryMarkets.includes(market.value)}
+                          onCheckedChange={() =>
+                            handleArrayToggle("primaryMarkets", market.value)
+                          }
+                        />
+                        <Label htmlFor={id} className="text-sm">
+                          {market.label}
+                        </Label>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : null } 
 
-          {/* Indonesia Region */}
-          <div className="mt-6">
-            <Label className="text-sm font-semibold text-gray-700">
-              Indonesia
-            </Label>
-            <div className="grid grid-cols-2 gap-3 mt-2">
-              {["Java", "Sumatra", "Kalimantan", "Sulawesi", "Papua"].map(
-                (market) => (
-                  <div key={market} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={market}
-                      checked={surveyData.primaryMarkets.includes(market)}
-                      onCheckedChange={() =>
-                        handleArrayToggle("primaryMarkets", market)
-                      }
-                    />
-                    <Label htmlFor={market} className="text-sm">
-                      {market}
-                    </Label>
-                  </div>
-                )
-              )}
-            </div>
-          </div>
         </div>
       </div>
     </div>

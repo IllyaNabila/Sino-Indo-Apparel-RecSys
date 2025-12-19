@@ -45,11 +45,15 @@ type MessagesUI = {
   sender: string;
   receiverId: string;
   content: string;
+  original?: string;
+  translatedText?: string;
+  sourceLang?: string;
+  targetLang?: string;
   timestamp: string;
 };
 
 export default function ChatPage() {
-  const { businessId, companyName } = useBusiness();
+  const { businessId, companyName, businessObject } = useBusiness();
   const { socket, unreadCounts, setUnreadCounts, selectedChat, setSelectedChat } = useSocket();
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   //const [selectedChat, setSelectedChat] = useState(null);
@@ -60,6 +64,8 @@ export default function ChatPage() {
   const [endedConversations, setEndedConversations] = useState<Record<string, boolean>>({});
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [productContexts, setProductContexts] = useState<Record<string, string | null>>({});
+
+  const viewerLang = businessObject?.preferredLanguage || "en";
 
   function generateObjectId(): string {
     const timestamp = Math.floor(Date.now() / 1000).toString(16);
@@ -91,22 +97,32 @@ export default function ChatPage() {
     feedbackForm: c.feedbackForm ?? "completed",
   });
 
-  const toMessageUI = (m: any): MessagesUI => ({
-    id: m.id ?? m._id ?? generateObjectId(),
-    sender:
-      typeof m.senderId === "object"
-        ? m.senderId._id
-        : m.senderId ?? m.sender ?? "",
-    receiverId: m.receiverId ?? "",
-    content: m.content ?? "",
-    timestamp: new Date(m.createdAt ?? m.timestamp).toLocaleString("en-US", {
-      year: "numeric",
-      month: "numeric",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
-  });
+  const toMessageUI = (m: any): MessagesUI => {
+    const original = m.text?.original ?? m.content ?? "";
+    const translations = m.text?.translations ?? {};
+    const translatedText = translations[viewerLang];
+
+    return {
+      id: m.id ?? m._id ?? generateObjectId(),
+      sender:
+        typeof m.senderId === "object"
+          ? m.senderId._id
+          : m.senderId ?? m.sender ?? "",
+      receiverId: m.receiverId ?? "",
+      content: translatedText ?? original,
+      timestamp: new Date(m.createdAt ?? m.timestamp).toLocaleString("en-US", {
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      original,
+      translatedText,
+      sourceLang: m.text?.sourceLang,
+      targetLang: translatedText ? viewerLang : undefined,
+    };
+  };
 
   const fetchConversation = async () => {
     try {
@@ -254,64 +270,6 @@ export default function ChatPage() {
     },
   ];
 
-  const mockMessages = [
-    {
-      id: 1,
-      sender: "them",
-      content:
-        "Hi! I'm interested in your organic cotton t-shirts. Can you provide more details about the pricing and MOQ?",
-      timestamp: "10:30 AM",
-      translated: false,
-    },
-    {
-      id: 2,
-      sender: "me",
-      content:
-        "Hello! Thank you for your interest. Our organic cotton t-shirts are priced at $8-12 per piece depending on quantity. The minimum order quantity is 500 pieces.",
-      timestamp: "10:32 AM",
-      translated: false,
-    },
-    {
-      id: 3,
-      sender: "them",
-      content:
-        "That sounds reasonable. What about the lead time for production?",
-      timestamp: "10:35 AM",
-      translated: false,
-    },
-    {
-      id: 4,
-      sender: "me",
-      content:
-        "For an order of 500-1000 pieces, the lead time is typically 2-3 weeks. For larger quantities, it may take 3-4 weeks.",
-      timestamp: "10:37 AM",
-      translated: false,
-    },
-    {
-      id: 5,
-      sender: "them",
-      content:
-        "Perfect! Can we schedule a call to discuss the details further?",
-      timestamp: "10:40 AM",
-      translated: false,
-    },
-    {
-      id: 6,
-      sender: "me",
-      content:
-        "I'm available tomorrow afternoon. What time works best for you?",
-      timestamp: "10:42 AM",
-      translated: false,
-    },
-    {
-      id: 7,
-      sender: "them",
-      content: "Thanks for the product details. When can we schedule a call?",
-      timestamp: "10:45 AM",
-      translated: false,
-    },
-  ];
-
   const currentChat = conversationsDetails.find(
     (chat) => chat.id === selectedChat
   );
@@ -347,6 +305,7 @@ console.log(currentChat)
       sender: businessId,
       receiverId: currentChat.partnerId,
       content: message,
+      original: message,
       timestamp: new Date().toLocaleString("en-US", {
         year: "numeric",
         month: "numeric",
@@ -584,7 +543,13 @@ console.log(currentChat)
                           : "bg-white border text-slate-800"
                       }`}
                     >
-                      <ChatMessageContent content={msg.content} />
+                      <ChatMessageContent
+                        content={msg.content}
+                        original={msg.original}
+                        translatedText={msg.translatedText}
+                        sourceLang={msg.sourceLang}
+                        targetLang={msg.targetLang}
+                      />
                       <div className="flex items-center justify-between mt-2">
                         <span
                           className={`text-xs ${
@@ -601,10 +566,17 @@ console.log(currentChat)
                           </div>
                         )}
                       </div>
-                      {msg.translated && (
+                      {msg.translatedText && msg.original && msg.translatedText !== msg.original && (
                         <div className="mt-2 pt-2 border-t border-emerald-500">
-                          <p className="text-xs text-emerald-100">
-                            Translated from Chinese
+                          <p
+                            className={`text-xs ${
+                              msg.sender === businessId.toString()
+                                ? "text-emerald-100"
+                                : "text-emerald-700"
+                            }`}
+                          >
+                            Translated from {msg.sourceLang?.toUpperCase?.() || "source"} to{" "}
+                            {msg.targetLang?.toUpperCase?.() || "target"}
                           </p>
                         </div>
                       )}

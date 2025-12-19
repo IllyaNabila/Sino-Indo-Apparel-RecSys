@@ -65,6 +65,7 @@ export default function ProfilePage() {
     phoneNumber: "",
     website: "",
     description: "",
+    preferredLanguage: "en",
   });
 
   const [initialCompanyInfo, setInitialCompanyInfo] = useState({
@@ -75,6 +76,7 @@ export default function ProfilePage() {
     phoneNumber: "",
     website: "",
     description: "",
+    preferredLanguage: "en",
   });
   const [isCompanyInfoChanged, setIsCompanyInfoChanged] = useState(false);
 
@@ -158,10 +160,12 @@ export default function ProfilePage() {
         phoneNumber: companyInfo.phoneNumber,
         website: companyInfo.website,
         description: companyInfo.description,
+        preferredLanguage: companyInfo.preferredLanguage,
       });
 
       console.log("Update success:", response.data);
       setIsCompanyInfoChanged(false); // Reset after successful save
+      setInitialCompanyInfo(companyInfo);
       // Optionally show success message or toast
     } catch (error: any) {
       console.error("Update failed:", error.response?.data || error.message);
@@ -298,8 +302,16 @@ export default function ProfilePage() {
         const res = await axios.get("/api/users/profile");
         const data = res.data;
 
-        setCompanyInfo(data.companyInfo);
-        setInitialCompanyInfo(data.companyInfo);
+        setCompanyInfo((prev) => ({
+          ...prev,
+          ...data.companyInfo,
+          preferredLanguage: data.companyInfo?.preferredLanguage || "en",
+        }));
+        setInitialCompanyInfo((prev) => ({
+          ...prev,
+          ...data.companyInfo,
+          preferredLanguage: data.companyInfo?.preferredLanguage || "en",
+        }));
         setLicenseStatus(data.licenseStatus);
         // Extract preference data
         const prefs = data.preference || {};
@@ -362,6 +374,7 @@ export default function ProfilePage() {
         phoneNumber: businessObject.phoneNumber || "",
         website: businessObject.website || "",
         description: businessObject.description || "",
+        preferredLanguage: businessObject.preferredLanguage || "en",
       };
       setCompanyInfo(info);
       setInitialCompanyInfo(info);
@@ -374,7 +387,8 @@ export default function ProfilePage() {
       companyInfo.registrationNumber !==
         initialCompanyInfo.registrationNumber ||
       companyInfo.address !== initialCompanyInfo.address ||
-      companyInfo.description !== initialCompanyInfo.description;
+      companyInfo.description !== initialCompanyInfo.description ||
+      companyInfo.preferredLanguage !== initialCompanyInfo.preferredLanguage;
 
     setIsCompanyInfoChanged(hasChanged);
   }, [companyInfo, initialCompanyInfo]);
@@ -519,6 +533,32 @@ export default function ProfilePage() {
                               })
                             }
                           />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="preferredLanguage">
+                            Preferred Language
+                          </Label>
+                          <Select
+                            value={companyInfo.preferredLanguage}
+                            onValueChange={(value) =>
+                              setCompanyInfo({
+                                ...companyInfo,
+                                preferredLanguage: value,
+                              })
+                            }
+                          >
+                            <SelectTrigger id="preferredLanguage">
+                              <SelectValue placeholder="Select language" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="en">English</SelectItem>
+                              <SelectItem value="id">
+                                Bahasa Indonesia
+                              </SelectItem>
+                              <SelectItem value="zh">中文</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         {/*
                         <div className="space-y-2">
