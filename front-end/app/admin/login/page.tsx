@@ -15,12 +15,18 @@ export default function AdminLoginPage() {
     email: "",
     password: "",
   })
+  const [isLoading, setLoading] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setLoading(true)
+
     // Validate email/password
     console.log("Admin login:", { email: formData.email, password: formData.password })
     // Redirect to admin dashboard
+    setTimeout(() => {
+      setLoading(false)
+    }, 2000)
   }
 
   return (
@@ -67,7 +73,7 @@ export default function AdminLoginPage() {
                 />
               </div>
               <Link href="/admin">
-                <Button type="submit" className="w-full bg-red-600 hover:bg-red-700">
+                <Button type="submit" className="w-full bg-red-600 hover:bg-red-700" disabled={isLoading}>
                   Sign In
                 </Button>
               </Link>

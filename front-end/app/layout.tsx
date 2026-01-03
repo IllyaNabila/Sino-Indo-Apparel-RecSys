@@ -4,6 +4,8 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import ClientLayoutWrapper from "@/components/client-layout-wrapper" // Declare the variable here
+import { BusinessProvider } from "@/context/BusinessContext";
+import { SocketProvider } from "@/context/SocketContext"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -36,7 +38,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <LayoutContent>{children}</LayoutContent>
+          <BusinessProvider>
+            <SocketProvider>
+              <LayoutContent>{children}</LayoutContent>
+            </SocketProvider>
+          </BusinessProvider>
         </ThemeProvider>
       </body>
     </html>

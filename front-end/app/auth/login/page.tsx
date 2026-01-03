@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-
+import { useBusiness } from "@/context/BusinessContext";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,24 +22,37 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 
 export default function LoginPage() {
+  const { businessId, companyName, businessObject, setBusinessObject, setBusinessId, setCompanyName } = useBusiness();
   const router = useRouter();
+  const [isLoading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     rememberMe: false,
   });
 
+  const handleNavigation = async (path: string) => {
+    setLoading(true);
+    await router.push(path);
+    setLoading(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true)
     try {
-      const response = await axios.post("/api/users/login", formData);
+      const response = await axios.post("/api/auth/login", formData);
       console.log("Login success", response.data);
       toast.success("Login success");
+      setBusinessId(response.data.businessId);
+      setCompanyName(response.data.companyName);
+      setBusinessObject(response.data.businessObject);
       router.push("/dashboard");
     } catch (error: any) {
       console.log("Login failed", error.message);
       toast.error(error.message);
     }
+    setLoading(false);
   };
 
   return (
@@ -62,7 +75,7 @@ export default function LoginPage() {
             </div>
             <CardTitle className="text-2xl">Welcome Back</CardTitle>
             <CardDescription>
-              Sign in to your ApparelBiz account
+              Sign in to your Sino-Indo Apparel Matcher account
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -118,14 +131,20 @@ export default function LoginPage() {
                   Forgot password?
                 </Link>
               </div>
-              
-                <Button
-                  type="submit"
-                  className="w-full bg-emerald-600 hover:bg-emerald-700"
-                >
-                  Sign In
-                </Button>
-              
+
+              <Button
+                type="submit"
+                className="w-full bg-emerald-600 hover:bg-emerald-700"
+                disabled={isLoading}
+              >
+                {isLoading ? 
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Signing in...
+                </> 
+                : 
+                "Sign In"}
+              </Button>
             </form>
 
             <div className="mt-6 text-center">
@@ -143,11 +162,9 @@ export default function LoginPage() {
             <div className="mt-6 pt-6 border-t">
               <div className="text-center">
                 <p className="text-sm text-slate-600 mb-4">Admin Access</p>
-                <Link href="/admin/login">
-                  <Button variant="outline" className="w-full">
-                    Admin Login
-                  </Button>
-                </Link>
+                <Button variant="outline" className="w-full" onClick={() => handleNavigation("/admin/login")}>
+                  Admin Login
+                </Button>
               </div>
             </div>
           </CardContent>

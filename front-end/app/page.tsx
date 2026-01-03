@@ -1,28 +1,40 @@
+"use client"
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowRight, Shield, MessageSquare, Search, BarChart3, Users, Globe } from "lucide-react"
 import Link from "next/link"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 export default function LandingPage() {
+  const [isLoading, setLoading] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleNavigation = async (path: string, button: string) => {
+    setLoading(button);
+    await router.push(path);
+    setLoading(null);
+  };
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">AB</span>
+            <div className="w-10 h-10 bg-rose-500 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">SIAM</span>
             </div>
-            <span className="font-bold text-xl text-slate-800">ApparelBiz</span>
+            <span className="font-bold text-xl text-slate-800">Sino-Indo Apparel Matcher</span>
           </div>
           <div className="flex items-center space-x-4">
-            <Link href="/auth/login">
-              <Button variant="ghost">Login</Button>
-            </Link>
-            <Link href="/auth/register">
-              <Button className="bg-emerald-600 hover:bg-emerald-700">Get Started</Button>
-            </Link>
+            <Button variant="ghost" disabled={isLoading === "login"} onClick={() => handleNavigation("/auth/login", "login")}>
+              Login
+            </Button>
+            <Button className="bg-rose-500 hover:bg-rose-600" disabled={isLoading === "register"} onClick={() => handleNavigation("/auth/register", "register")}>
+              Get Started
+            </Button>
           </div>
         </div>
       </header>
@@ -30,23 +42,20 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="py-20 px-4">
         <div className="container mx-auto text-center">
-          <Badge className="mb-4 bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-            Connecting Global Apparel Businesses
+          <Badge className="mb-4 bg-rose-100 text-rose-800 hover:bg-rose-100">
+            Verified. Matched. Connected.
           </Badge>
           <h1 className="text-5xl font-bold text-slate-800 mb-6 leading-tight">
-            Your Gateway to the
-            <span className="text-emerald-600"> Apparel Industry</span>
+            Bridging Cultures in the
+            <span className="text-rose-500"> Apparel Industry</span>
           </h1>
           <p className="text-xl text-slate-600 mb-8 max-w-3xl mx-auto">
-            Connect manufacturers and importers, discover products, manage your business profile, and grow your network
-            in the global apparel marketplace.
+            Match with verified apparel partners, discover culturally-relevant products, and grow your cross-border business through AI-powered recommendations tailored for the China–Indonesia trade.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/auth/register">
-              <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700">
-                Start Your Journey <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+            <Button size="lg" className="bg-rose-500 hover:bg-rose-600" disabled={isLoading === "start your journey"} onClick={() => handleNavigation("/auth/register", "start your journey")}>
+              Start Your Journey <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
             <Button size="lg" variant="outline">
               Learn More
             </Button>
@@ -54,7 +63,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Features Section 
       <section className="py-16 px-4 bg-white">
         <div className="container mx-auto">
           <div className="text-center mb-12">
@@ -131,9 +140,9 @@ export default function LandingPage() {
             </Card>
           </div>
         </div>
-      </section>
+      </section>*/}
 
-      {/* CTA Section */}
+      {/* CTA Section 
       <section className="py-16 px-4 bg-emerald-600">
         <div className="container mx-auto text-center">
           <h2 className="text-3xl font-bold text-white mb-4">Ready to Transform Your Apparel Business?</h2>
@@ -146,9 +155,9 @@ export default function LandingPage() {
             </Button>
           </Link>
         </div>
-      </section>
+      </section>*/}
 
-      {/* Footer */}
+      {/* Footer 
       <footer className="bg-slate-800 text-white py-12 px-4">
         <div className="container mx-auto">
           <div className="grid md:grid-cols-4 gap-8">
@@ -195,7 +204,7 @@ export default function LandingPage() {
             <p>&copy; 2024 ApparelBiz. All rights reserved.</p>
           </div>
         </div>
-      </footer>
+      </footer>*/}
     </div>
   )
 }
