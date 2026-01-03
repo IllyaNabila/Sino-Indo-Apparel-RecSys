@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Upload, X, Plus, Save, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
+import axios from "axios"
 
 interface ProductFormData {
   name: string
@@ -25,7 +26,7 @@ interface ProductFormData {
   colors: string[]
   sizes: string[]
   leadTime: string
-  images: (File | string)[] // Can be File objects or URLs
+  images: File[] // Can be File objects or URLs
 }
 
 export default function EditProductPage() {
@@ -91,26 +92,23 @@ export default function EditProductPage() {
     const loadProduct = async () => {
       try {
         // Simulate API call to load product data
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
+        //await new Promise((resolve) => setTimeout(resolve, 1000))
+        const { data } = await axios.get(`/api/products?id=${productId}`);
+        console.log("data edit", data);
         // Mock product data - in real app, this would come from API
         const mockProduct = {
           id: productId,
-          name: "Organic Cotton T-Shirts",
-          category: "T-Shirts",
-          material: "Organic Cotton",
-          moq: "500",
-          priceMin: "8",
-          priceMax: "15",
-          description: "Premium organic cotton t-shirts with GOTS certification. Soft, comfortable, and sustainable.",
-          colors: ["White", "Black", "Navy", "Gray"],
-          sizes: ["S", "M", "L", "XL", "XXL"],
-          leadTime: "2-3 weeks",
-          images: [
-            "/placeholder.svg?height=200&width=200",
-            "/placeholder.svg?height=200&width=200",
-            "/placeholder.svg?height=200&width=200",
-          ],
+          name: data.name,
+          category: data.category,
+          material: data.material,
+          moq: data.moq,
+          priceMin: data.priceMin,
+          priceMax: data.priceMax,
+          description: data.description,
+          colors: data.colors,
+          sizes: data.sizes,
+          leadTime: data.leadTime,
+          images: data.images,
         }
 
         setFormData(mockProduct)
@@ -170,16 +168,32 @@ export default function EditProductPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    if (files.length > 0) {
-      setFormData({ ...formData, images: [...formData.images, ...files] })
-      // Clear image error if images are added
-      if (errors.images) {
-        setErrors({ ...errors, images: "" })
+  const convertToBase64 = (file: File): Promise<string> =>{
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+
+    reader.onload = () => {
+      const base64String = reader.result?.toString().split(",")[1];
+      if (base64String) resolve(base64String);
+      else reject("Conversion failed");
+    };
+
+    reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      e.preventDefault()
+      const files = Array.from(e.target.files || [])
+      if (files.length > 0) {
+        setFormData({ ...formData, images: [...formData.images, ...files] })
+        // Clear image error if images are added
+        if (errors.images) {
+          setErrors({ ...errors, images: "" })
+        }
       }
-    }
-  }
+    };
 
   const removeImage = (index: number) => {
     const newImages = formData.images.filter((_, i) => i !== index)
@@ -216,22 +230,38 @@ export default function EditProductPage() {
     }
 
     setIsSubmitting(true)
+    console.log("Form data: ", formData);
+
+    // Convert all images to base64
+      const base64Images = await Promise.all(
+        formData.images.map(async (fileOrString) => {
+          if (typeof fileOrString === 'string') {
+            return fileOrString;
+          }
+          return convertToBase64(fileOrString as File)
+        })
+      );
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const res = await axios.patch(`/api/products?id=${productId}`, {
+          name: formData.name,
+          category: formData.category,
+          material: formData.material,
+          moq: formData.moq,
+          priceMin: formData.priceMin,
+          priceMax: formData.priceMax,
+          description: formData.description,
+          colors: formData.colors,
+          sizes: formData.sizes,
+          leadTime: formData.leadTime,
+          images: base64Images,
+      });
 
-      const productData = {
-        ...formData,
-        price: `$${formData.priceMin}-${formData.priceMax}`,
-        moq: `${formData.moq} pcs`,
-        id: productId,
+      console.log("Updating product:", formData)
+
+      if (res.status === 200) {
+        router.push("/products");
       }
-
-      console.log("Updating product:", productData)
-
-      // Redirect to products page
-      router.push("/products")
     } catch (error) {
       console.error("Error updating product:", error)
     } finally {
@@ -465,7 +495,7 @@ export default function EditProductPage() {
                   {formData.images.map((image, index) => (
                     <div key={index} className="relative group">
                       <img
-                        src={typeof image === "string" ? image : URL.createObjectURL(image)}
+                        src={typeof image === "string" ? `data:image/png;base64,${image}` : URL.createObjectURL(image)}
                         alt={`Product ${index + 1}`}
                         className="w-full h-32 object-cover rounded-lg border"
                       />
@@ -481,7 +511,7 @@ export default function EditProductPage() {
                 </div>
               )}
 
-              {/* Image Upload */}
+              {/* Image Upload 
               <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
                 <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
                 <div className="space-y-2">
@@ -500,7 +530,26 @@ export default function EditProductPage() {
                   />
                   <p className="text-sm text-slate-500">PNG, JPG up to 5MB each. Multiple images allowed.</p>
                 </div>
-              </div>
+              </div>*/}
+              <Label
+                htmlFor="images"
+                className="flex
+                          flex-col
+                          items-center
+                          justify-center
+                          border-2
+                          border-dashed
+                          border-slate-300
+                          rounded-lg
+                          p-6
+                          text-center
+                          cursor-pointer
+                          hover:bg-slate-50">
+                <Upload className="h-12 w-12 text-slate-400 mb-4"></Upload>
+                <span className="text-sm font-medium text-slate-700">Click to upload or drag and drop</span>
+                <p className="text-xs text-slate-500">PNG, JPG up to 5MB each. Multiple images allowed</p>
+                <Input id="images" type="file" accept="images/*" multiple className="hidden" onChange={handleImageUpload}></Input>
+              </Label>
 
               {errors.images && (
                 <p className="text-sm text-red-500 flex items-center">
@@ -535,7 +584,10 @@ export default function EditProductPage() {
                   <Input
                     placeholder="Add color"
                     value={newColor}
-                    onChange={(e) => setNewColor(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const capitalized = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+                      setNewColor(capitalized)}}
                     onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addColor())}
                   />
                   <Button type="button" onClick={addColor} variant="outline">
@@ -561,7 +613,7 @@ export default function EditProductPage() {
                   <Input
                     placeholder="Add size (e.g., S, M, L, XL)"
                     value={newSize}
-                    onChange={(e) => setNewSize(e.target.value)}
+                    onChange={(e) => setNewSize(e.target.value.toUpperCase())}
                     onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSize())}
                   />
                   <Button type="button" onClick={addSize} variant="outline">

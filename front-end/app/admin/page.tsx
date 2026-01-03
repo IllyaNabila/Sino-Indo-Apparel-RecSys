@@ -150,7 +150,9 @@ export default function AdminDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-800">Admin Dashboard</h1>
-            <p className="text-slate-600">Manage users, licenses, and platform operations</p>
+            {/*<p className="text-slate-600">Manage users, licenses, and platform operations</p>
+          */}
+            <p className="text-slate-600">Review and manage business license submissions</p>
           </div>
           <div className="flex items-center space-x-4">
             <Link
@@ -160,10 +162,11 @@ export default function AdminDashboard() {
               <LogOut className="mr-3 h-5 w-5 text-slate-400 group-hover:text-slate-500" />
               Sign Out
             </Link>
+            {/**
             <Button variant="outline">
               <Download className="h-4 w-4 mr-2" />
               Export Data
-            </Button>
+            </Button> */}
             <Badge className="bg-red-100 text-red-800">Admin Access</Badge>
           </div>
         </div>
@@ -188,6 +191,8 @@ export default function AdminDashboard() {
           ))}
         </div>*/}
 
+        <AdminLicensesPage />
+        {/**
         <Tabs defaultValue="licenses" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="licenses">License Management</TabsTrigger>
@@ -197,7 +202,6 @@ export default function AdminDashboard() {
           <TabsContent value="licenses" className="space-y-6">
             <Card>
               <CardContent>
-                <AdminLicensesPage />
               </CardContent>
             </Card>
           </TabsContent>
@@ -210,7 +214,7 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
-        </Tabs>
+        </Tabs>*/}
       </div>
     </div>
   )

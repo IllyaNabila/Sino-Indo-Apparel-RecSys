@@ -9,7 +9,7 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
   const pathname = usePathname()
 
   // Pages that should NOT show navigation
-  const noNavPaths = ["/", "/auth/login", "/auth/register", "/auth/survey", "/auth/forgot-password", "/admin", "/admin/login"]
+  const noNavPaths = ["/", "/auth/login", "/auth/register", "/auth/business-details", "/auth/license-upload", "/auth/survey", "/auth/forgot-password", "/admin", "/admin/login"]
 
   const showNavigation = !noNavPaths.includes(pathname)
 
