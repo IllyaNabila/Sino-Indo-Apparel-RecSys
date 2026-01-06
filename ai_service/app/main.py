@@ -1,3 +1,5 @@
+#main.py
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -29,12 +31,12 @@ app.include_router(embed_router, prefix="/api")
 app.include_router(embed_one_router, prefix="/api")
 app.include_router(recommend_router, prefix="/api")
 
-# CORS: allow Next.js dev + prod domains
-origins= [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    # "https://your-production-domain.com", # add later
-]
+# ✅ Read allowed origins from env
+# Example env value:
+# CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,https://your-app.vercel.app
+cors_env = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+
+origins = [o.strip() for o in cors_env.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
