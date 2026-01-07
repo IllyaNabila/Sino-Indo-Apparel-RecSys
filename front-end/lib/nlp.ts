@@ -59,7 +59,7 @@ export function extractEntities(text: string) {
     ATTRIBUTES,
     LOCATIONS,
     MATERIAL_SYNONYMS,
-  }: TextileEntities = textileEntities as any;
+  }: TextileEntities = textileEntities as unknown as TextileEntities;
 
   const foundMaterials = [];
 

@@ -1,61 +1,104 @@
 import { connect } from "@/dbConfig/dbConfig";
 import User from "@/models/userModel";
+import Business from "@/models/businessModel";
 import { NextRequest, NextResponse } from "next/server";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
-import Business from "@/models/businessModel";
 
 connect();
 
 export async function POST(request: NextRequest) {
   try {
-    const reqBody = await request.json();
-    const { email, password } = reqBody;
-    console.log(reqBody);
+    const reqBody = await request.json().catch(() => null);
 
-    //Check if user exists
-    const user = await User.findOne({ email });
-    if (!user) {
+    if (!reqBody) {
       return NextResponse.json(
-        { error: "User does not exist" },
+        { error: "Invalid JSON body" },
         { status: 400 }
       );
     }
 
-    //Check if password is correct
-    const validPassword = await bcryptjs.compare(password, user.password);
-    if (!validPassword) {
-      return NextResponse.json({ error: "Invalid password" }, { status: 400 });
+    const email = String(reqBody.email ?? "").trim().toLowerCase();
+    const password = String(reqBody.password ?? "");
+
+    // Basic validation
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: "Email and password are required" },
+        { status: 400 }
+      );
     }
 
-    // ✅ Try to find associated business
+    // (Optional) simple email format check
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!emailOk) {
+      return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
+    }
+
+    // Check if user exists
+    const user = await User.findOne({ email });
+    // Use same generic message to avoid user enumeration
+    if (!user) {
+      return NextResponse.json(
+        { error: "Invalid email or password" },
+        { status: 401 }
+      );
+    }
+
+    // Check password
+    const validPassword = await bcryptjs.compare(password, user.password);
+    if (!validPassword) {
+      return NextResponse.json(
+        { error: "Invalid email or password" },
+        { status: 401 }
+      );
+    }
+
+    // Find associated business (optional relationship)
     const business = await Business.findOne({ submittedBy: user._id });
 
-    // Create token data
-    const tokenData: any = {
-      id: user._id,
-      email: user.email,
-    };
-    if (business) tokenData.businessId = business._id;
+    // Create token payload
+    const tokenData: any = { id: user._id, email: user.email };
+    if (business?._id) tokenData.businessId = business._id;
 
-    //Create token
-    const token = jwt.sign(tokenData, process.env.TOKEN_SECRET!, {
-      expiresIn: "1d",
-    });
+    const secret = process.env.TOKEN_SECRET;
+    if (!secret) {
+      console.error("TOKEN_SECRET is missing");
+      return NextResponse.json(
+        { error: "Server misconfiguration" },
+        { status: 500 }
+      );
+    }
 
-    const response = NextResponse.json({
-      message: "Login successful",
-      success: true,
-      businessId: business._id,
-      companyName: business.companyName,
-      businessObject: business,
-    });
+    const token = jwt.sign(tokenData, secret, { expiresIn: "1d" });
 
-    response.cookies.set("token", token, {
+    const res = NextResponse.json(
+      {
+        message: "Login successful",
+        success: true,
+        businessId: business?._id ?? null,
+        companyName: business?.companyName ?? null,
+        businessObject: business ?? null,
+      },
+      { status: 200 }
+    );
+
+    res.cookies.set("token", token, {
       httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // true on HTTPS
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24, // 1 day in seconds
     });
-    return response;
+
+    return res;
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // Server-side log, client gets safe message
+    console.error("Login error:", error);
+
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

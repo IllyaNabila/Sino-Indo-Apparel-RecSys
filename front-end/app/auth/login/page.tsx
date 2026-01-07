@@ -39,20 +39,59 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true)
+    if (isLoading) return; // prevents double submit
+
+    setLoading(true);
+
     try {
-      const response = await axios.post("/api/auth/login", formData);
-      console.log("Login success", response.data);
+      const response = await axios.post("/api/auth/login", formData, {
+        timeout: 8000, // optional: avoid hanging forever
+        headers: { "Content-Type": "application/json" },
+      });
+
       toast.success("Login success");
+
       setBusinessId(response.data.businessId);
       setCompanyName(response.data.companyName);
       setBusinessObject(response.data.businessObject);
+
       router.push("/dashboard");
-    } catch (error: any) {
-      console.log("Login failed", error.message);
-      toast.error(error.message);
+    } catch (err: unknown) {
+      // Default fallback message
+      let message = "Login failed. Please try again.";
+
+      // Axios-specific handling
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status;
+
+        // If backend returns a message like { error: "..."} or { message: "..." }
+        const apiMsg =
+          (err.response?.data as any)?.error ||
+          (err.response?.data as any)?.message;
+
+        if (typeof apiMsg === "string" && apiMsg.trim()) {
+          message = apiMsg;
+        } else if (!err.response) {
+          // No response = network / CORS / server down
+          message = "No response from server. Check your internet and try again.";
+        } else if (status === 401) {
+          message = "Invalid email or password.";
+        } else if (status === 429) {
+          message = "Too many attempts. Please wait a moment and try again.";
+        } else if (status && status >= 500) {
+          message = "Server error. Please try again later.";
+        } else if (err.code === "ECONNABORTED") {
+          message = "Request timed out. Please try again.";
+        }
+      }
+
+      // Log for debugging (keep it, but don't show raw error to user)
+      console.error("Login failed:", err);
+
+      toast.error(message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
