@@ -296,7 +296,7 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
     .limit(6)
     .populate({ path: "businessId", select: "companyName" })
     .lean();
-  console.log("matchedProducts",matchedProducts)
+  //console.log("matchedProducts",matchedProducts)
 
   const recommendedProducts: DashboardAnalyticsResponse["recommendedProducts"] =
     (matchedProducts as unknown as LeanProduct[]).map((p) => ({
@@ -322,14 +322,14 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
   if (pref?.primaryMarkets_norm?.length) {
     companyMatch.address = { $in: pref.primaryMarkets_norm };
   }
-  console.log(companyMatch);
+ // console.log(companyMatch);
 
   //Fetch the companies
   const companies = await Business.find(companyMatch)
     .sort({ updatedAt: -1 })
     .limit(6)
     .lean();
-  console.log(companies);
+  //console.log(companies);
 
   //Count products for each company
   const companyIds = companies.map((c: any) => c._id);
@@ -348,7 +348,7 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
       verified: !!c.verified,
       products: countMap.get(String(c._id)) ?? 0,
     }));
-  console.log(recommendedCompanies);
+  //console.log(recommendedCompanies);
 
   // ---------- Charts ----------
   // Your UI expects TREND_DATA / REGION_DATA / SEASONAL_DATA shapes :contentReference[oaicite:18]{index=18} :contentReference[oaicite:19]{index=19}
@@ -396,7 +396,7 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
       },
     },
   ]);
-  console.log(trendRows);
+ // console.log(trendRows);
 
   // Build month labels = last 6 months
   const monthLabels: string[] = [];
@@ -421,7 +421,7 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
         }))
       : [{ label: "No Data", data: monthNums.map(() => 0) }],
   };
-  console.log(trends);
+  //console.log(trends);
 
   // Regional: you don’t store region; so we return distribution by Business.country (market share proxy)
   const countryDist = await Business.aggregate<{ address: string; count: number }>([
@@ -431,13 +431,13 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
     { $sort: { count: -1 } },
     { $limit: 8 },
   ]);
-  console.log(countryDist);
+  //console.log(countryDist);
 
   const regional: PieData = {
     labels: countryDist.length ? countryDist.map((r) => r.address) : ["No Data"],
     datasets: [{ label: "Market Share", data: countryDist.length ? countryDist.map((r) => r.count) : [1] }],
   };
-  console.log(regional);
+  //console.log(regional);
 
   // Seasonal: counts per season for the same top categories
   const seasonalRows = await Product.aggregate<{ season: string; category: string; count: number }>([
@@ -479,7 +479,7 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
     },
     { $project: { _id: 0, season: "$_id.season", category: "$_id.category", count: 1 } },
   ]);
-  console.log(seasonalRows);
+  //console.log(seasonalRows);
 
   const seasons = ["Spring", "Summer", "Fall", "Winter"] as const;
   const seasonal: ChartData = {
@@ -491,7 +491,7 @@ const latestLicense = (await BusinessLicense.findOne({ businessId: bid })
         }))
       : [{ label: "No Data", data: seasons.map(() => 0) }],
   };
-  console.log(seasonal);
+  //console.log(seasonal);
 
   return {
     stats,
