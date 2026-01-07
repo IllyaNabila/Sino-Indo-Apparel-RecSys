@@ -115,7 +115,11 @@ def recommend(payload: RecommendIn):
             
             # Extract IDs and add to filters
             loc_biz_ids = [b["_id"] for b in matching_businesses]
-            base_filters["businessId"] = {"$in": loc_biz_ids}
+            if loc_biz_ids:
+                base_filters["businessId"] = {"$in": loc_biz_ids}
+            else:
+                # No location hits; avoid over-filtering so we can still return non-location results
+                print("No businesses matched location filter; skipping location constraint.")
 
         if payload.query_material:
             base_filters["material_norm"] = payload.query_material
