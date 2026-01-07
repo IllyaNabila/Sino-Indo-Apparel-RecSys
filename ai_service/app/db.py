@@ -28,13 +28,3 @@ preferences_col = db["preferences"]
 if __name__ == "__main__":
     print("✅ MongoDB connection successful.")
     print(f"Host: {client.HOST}:{client.PORT}")
-    print("-" * 20)
-    print("Attempting to fetch one document from the 'products' collection...")
-    
-    first_product = preferences_col.find_one()
-
-    if first_product:
-        print("✅ Successfully fetched a document:")
-        pprint(first_product)
-    else:
-        print("⚠️ Connection su")
