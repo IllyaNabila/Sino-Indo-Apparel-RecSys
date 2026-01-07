@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import ClientLayoutWrapper from "@/components/client-layout-wrapper" // Declare the variable here
 import { BusinessProvider } from "@/context/BusinessContext";
 import { SocketProvider } from "@/context/SocketContext"
+import { Toaster } from "react-hot-toast"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -40,7 +41,10 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <BusinessProvider>
             <SocketProvider>
-              <LayoutContent>{children}</LayoutContent>
+              <LayoutContent>
+                {children}
+                <Toaster/>
+              </LayoutContent>
             </SocketProvider>
           </BusinessProvider>
         </ThemeProvider>

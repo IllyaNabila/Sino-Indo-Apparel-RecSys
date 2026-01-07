@@ -89,12 +89,12 @@ export async function POST(req: Request) {
     const location = gemini?.location ?? nlp.location ?? null;
 
     // (Optional) keep this if you really need it every request
-    const embedall = await fetch(`${AI_URL}/api/embed-all`, {
+    {/**const embedall = await fetch(`${AI_URL}/api/embed-all`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
     });
     const embed = await embedall.json();
-    console.log("embed:", embed);
+    console.log("embed:", embed);*/}
 
     // C) Call FastAPI recommender (same payload as your current code)
     const recRes = await fetch(`${AI_URL}/api/recommend`, {

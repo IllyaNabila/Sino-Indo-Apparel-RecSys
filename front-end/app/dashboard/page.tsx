@@ -212,6 +212,10 @@ export default function DashboardPage() {
     { bg: "rgba(236,72,153,0.5)", border: "rgb(236,72,153)" }, // pink
     { bg: "rgba(16,185,129,0.5)", border: "rgb(16,185,129)" }, // green
     { bg: "rgba(99,102,241,0.5)", border: "rgb(99,102,241)" }, // indigo
+    { bg: "rgba(245,158,11,0.5)", border: "rgb(245,158,11)" }, // amber
+    { bg: "rgba(139,92,246,0.5)", border: "rgb(139,92,246)" }, // violet
+    { bg: "rgba(239,68,68,0.5)", border: "rgb(239,68,68)" }, // red
+    { bg: "rgba(34,197,94,0.5)", border: "rgb(34,197,94)" }, // emerald
   ];
 
   const withColors = (incoming: any, fallback: any) => {
