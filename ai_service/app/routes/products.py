@@ -1,3 +1,4 @@
+# backend/routes/products.py
 from fastapi import APIRouter
 from ..models.product_models import ProductIn
 from ..db import products_col
