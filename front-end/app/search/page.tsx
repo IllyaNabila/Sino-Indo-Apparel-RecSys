@@ -239,14 +239,61 @@ export default function SearchPage() {
     },
   ];
 
+  const responseOpeners = [
+    (count: number, q: string) =>
+      `I dug through our catalog and found ${count} options for "${q}".`,
+    (count: number, q: string) =>
+      `Here are ${count} tailored picks for "${q}" based on what we know about you.`,
+    (count: number, q: string) =>
+      `I matched ${count} items to "${q}". Sharing the best fits below.`,
+  ];
+
+  const buildExplainability = (products: any[]) => {
+    if (!products || products.length === 0) {
+      return "No recommendations yet—try refining your request or adding a material, budget, or region.";
+    }
+
+    return products
+      .slice(0, 3)
+      .map((product: any, idx: number) => {
+        const ratingValue =
+          typeof product.rating === "number"
+            ? product.rating
+            : parseFloat(product.rating);
+        const details = [
+          product.relevanceScore ? `${product.relevanceScore}% match` : "",
+          Number.isFinite(ratingValue) && ratingValue > 0
+            ? `rating ${ratingValue.toFixed(1)}`
+            : "",
+          product.material ? `material: ${product.material}` : "",
+          product.category ? `category: ${product.category}` : "",
+        ].filter(Boolean);
+
+        const reason =
+          product.explanation ||
+          product.reason ||
+          "Matches your stated needs from the recommender.";
+        const meta = details.length > 0 ? ` (${details.join(" • ")})` : "";
+
+        return `${idx + 1}. ${product.name || "Product"}${meta} — ${reason}`;
+      })
+      .join("\n");
+  };
+
   const processQuery = async (query: string): Promise<Message> => {
     const products = await fetchRecProducts(query);
+    const count = products?.length || 0;
+    const opener =
+      responseOpeners[Math.floor(Math.random() * responseOpeners.length)](
+        count,
+        query
+      );
+    const explainability = buildExplainability(products || []);
+
     return {
       id: Date.now().toString(),
       type: "assistant",
-      content: `🔍 I found ${
-        products?.length || 0
-      } results for "${query}". Here's what matches your search:`,
+      content: `${opener}\n\nWhy these picks:\n${explainability}`,
       timestamp: new Date(),
       rawData: products || [],
     };
@@ -601,6 +648,9 @@ const processNLPQuery = async (query: string): Promise<Message> => {
           ...p,
           relevanceScore: rec ? Math.round(rec.similarity * 100) : 0,
           rating: ratingData ? ratingData.avgProductRating : 0,
+          explanation:
+            rec?.explanation ||
+            "Selected based on similarity to your query and profile preferences.",
         };
       });
       setFetchRecProduct(products); // Update state with fetched products

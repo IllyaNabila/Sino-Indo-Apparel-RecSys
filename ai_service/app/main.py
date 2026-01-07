@@ -4,12 +4,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Any, Dict
-from .routes.products import router as products_router
-from .routes.embed import router as embed_router
 from .routes.embedone import router as embed_one_router
 from .routes.recommend import router as recommend_router
 
-from .models.model import ai_model
 from .db import client # Import the client
 
 app = FastAPI(
@@ -26,8 +23,6 @@ def startup_db_client():
     except Exception as e:
         print(f"❌ Failed to connect to MongoDB: {e}")
 
-app.include_router(products_router, prefix="/api")
-app.include_router(embed_router, prefix="/api")
 app.include_router(embed_one_router, prefix="/api")
 app.include_router(recommend_router, prefix="/api")
 
@@ -46,18 +41,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class PredictRequest(BaseModel):
-    query: str
-    # you can add other fields used by your ai logic
-    # e.g. lat: float, userId: str, etc.
-
-class PredictResponse(BaseModel):
-    prediction: Dict[str, Any]
-
-@app.post("/predict", response_model=PredictResponse)
-async def predict(req: PredictRequest) -> PredictResponse:
-    result = ai_model.predict(req.dict())
-    return PredictResponse(prediction=result)
+@app.get("/")
+def read_root():
+    return {"status": "online", "message": "AI Service is running"}
 
 @app.get("/health")
 def health():

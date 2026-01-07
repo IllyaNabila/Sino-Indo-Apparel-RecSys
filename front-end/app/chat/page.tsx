@@ -414,18 +414,19 @@ console.log(currentChat)
               >
                 <div className="flex items-center space-x-3">
                   <div className="relative">
-                    {/*<Avatar>
+                    {/* */}
+                    <Avatar>
                       <AvatarImage
                         src={conversation.avatar || "/placeholder.svg"}
                       />
                       <AvatarFallback>
                         {conversation.name
                           .split(" ")
-                          .map((word) => word[0])
+                          .map((word: string) => word[0])
                           .join("")
                           .slice(0, 2)}
                       </AvatarFallback>
-                    </Avatar>
+                    </Avatar>{/**
                     {conversation.online && (
                       <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-400 rounded-full border-2 border-white"></div>
                     )}*/}
@@ -473,18 +474,19 @@ console.log(currentChat)
               <div className="bg-white border-b p-4 flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="relative">
-                    {/*<Avatar>
+                    {/**/}
+                    <Avatar>
                       <AvatarImage
                         src={currentChat.avatar || "/placeholder.svg"}
                       />
                       <AvatarFallback>
                         {currentChat.name
                           .split(" ")
-                          .map((word) => word[0])
+                          .map((word: string) => word[0])
                           .join("")
                           .slice(0, 2)}
                       </AvatarFallback>
-                    </Avatar>
+                    </Avatar>{/** 
                     {currentChat.online && (
                       <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-400 rounded-full border-2 border-white"></div>
                     )}*/}
@@ -497,9 +499,6 @@ console.log(currentChat)
                       >
                         {currentChat.name}
                       </h2>
-                      <Button variant="outline" size="sm" onClick={handleEndConversation} disabled={isCurrentConversationEnded}>
-                        <MessageCircleOff className="h-4 w-4 mr-2" /> End Conversation
-                      </Button>
                       {currentChat.verified && (
                         <CheckCircle className="h-4 w-4 text-emerald-600" />
                       )}
@@ -509,6 +508,10 @@ console.log(currentChat)
                     </p>*/}
                   </div>
                 </div>
+                <Button variant="outline" size="sm" onClick={handleEndConversation} disabled={isCurrentConversationEnded}>
+                  <MessageCircleOff className="h-4 w-4 mr-2" /> End Conversation
+                </Button>
+                {/**
                 <div className="flex items-center space-x-2">
                   <Button variant="outline" size="sm">
                     <Phone className="h-4 w-4" />
@@ -522,7 +525,7 @@ console.log(currentChat)
                   <Button variant="outline" size="sm">
                     <MoreVertical className="h-4 w-4" />
                   </Button>
-                </div>
+                </div> */}
               </div>
 
               {/* Messages */}
@@ -611,9 +614,10 @@ console.log(currentChat)
                         disabled={isCurrentConversationEnded}
                       />
                     </div>
+                    {/**
                     <Button variant="outline" size="sm" disabled={isCurrentConversationEnded}>
                       <Languages className="h-4 w-4" />
-                    </Button>
+                    </Button> */}
                     <Button
                       type="submit"
                       className="bg-rose-500 hover:bg-rose-600"
