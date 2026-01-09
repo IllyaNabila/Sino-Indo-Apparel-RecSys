@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 export default function ResetPasswordPage() {
   const sp = useSearchParams();
@@ -45,36 +46,44 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-2xl border p-6">
-        <h1 className="text-2xl font-semibold">Reset password</h1>
+    <div className="min-h-screen flex justify-center p-6">
+      <div className="w-full max-w-md">
+        <div className="mb-6">
+            <Link
+              href="/auth/login"
+              className="inline-flex items-center text-slate-600 hover:text-slate-800"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Login
+            </Link>
+          </div>
+        <div className="shadow-xl w-full max-w-md rounded-2xl border p-6">
+          <h1 className="text-2xl font-semibold">Reset password</h1>
 
-        <form onSubmit={handleSubmit} className="mt-5 space-y-3">
-          <label className="block text-sm font-medium">New password</label>
-          <input
-            className="w-full rounded-lg border px-3 py-2"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={3}
-            required
-            placeholder="Min 8 characters"
-            disabled={success}
-          />
+          <form onSubmit={handleSubmit} className="mt-5 space-y-3">
+            <label className="block text-sm font-medium">New password</label>
+            <input
+              className="w-full rounded-lg border px-3 py-2"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              minLength={3}
+              required
+              placeholder="Min 8 characters"
+              disabled={success}
+            />
 
-          <button
-            className="w-full rounded-lg bg-emerald-600 text-white py-2 font-medium disabled:opacity-60"
-            disabled={loading || success}
-          >
-            {loading ? "Resetting..." : "Reset password"}
-          </button>
+            <button
+              className="w-full rounded-lg bg-emerald-600 text-white py-2 font-medium disabled:opacity-60"
+              disabled={loading || success}
+            >
+              {loading ? "Resetting..." : "Reset password"}
+            </button>
 
-          {msg && <p className="text-sm mt-2">{msg}</p>}
+            {msg && <p className="text-sm mt-2">{msg}</p>}
 
-          <Link href="/auth/login" className="text-sm text-emerald-600 hover:underline">
-            Go to login
-          </Link>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

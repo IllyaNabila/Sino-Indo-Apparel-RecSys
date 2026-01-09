@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -25,8 +26,18 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-2xl border p-6">
+    <div className="min-h-screen flex justify-center p-6">
+      <div className="w-full max-w-md">
+      <div className="mb-6">
+          <Link
+            href="/auth/login"
+            className="inline-flex items-center text-slate-600 hover:text-slate-800"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Home
+          </Link>
+        </div>
+      <div className="shadow-xl w-full max-w-md rounded-2xl border p-6">
         <h1 className="text-2xl font-semibold">Forgot password</h1>
         <p className="text-sm text-gray-500 mt-1">
           Enter your email and we’ll send a reset link.
@@ -51,11 +62,8 @@ export default function ForgotPasswordPage() {
           </button>
 
           {msg && <p className="text-sm mt-2">{msg}</p>}
-
-          <Link href="/auth/login" className="text-sm text-emerald-600 hover:underline">
-            Back to login
-          </Link>
         </form>
+      </div>
       </div>
     </div>
   );
