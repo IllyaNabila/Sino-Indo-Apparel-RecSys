@@ -16,6 +16,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import axios from "axios"
+import dynamic from "next/dynamic";
+
+// Dynamically import the ProfileButton with SSR turned off
+const ProfileButton = dynamic(() => import("@/components/ProfileButton"), {
+  ssr: false,
+});
 
 interface ProductData {
   id: string
@@ -226,12 +232,15 @@ export default function ProductsPage() {
             <h1 className="text-2xl font-bold text-slate-800">Product Catalog</h1>
             <p className="text-slate-600">Manage your product listings and showcase your offerings</p>
           </div>
-          <Link href="/products/new">
-            <Button className="bg-rose-500 hover:bg-rose-600">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/products/new">
+              <Button className="bg-rose-500 hover:bg-rose-600">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </Link>
+            <ProfileButton/>
+          </div>
         </div>
       </header>
 

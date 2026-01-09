@@ -39,6 +39,12 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { useBusiness } from "@/context/BusinessContext";
+import dynamic from "next/dynamic";
+
+// Dynamically import the ProfileButton with SSR turned off
+const ProfileButton = dynamic(() => import("@/components/ProfileButton"), {
+  ssr: false,
+});
 
 type PartnerPreferences = {
   regions: string[];
@@ -445,6 +451,7 @@ export default function ProfilePage() {
                 Verification Required
               </Badge>
             )}
+            <ProfileButton/>
           </div>
         </div>
       </header>

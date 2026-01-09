@@ -24,7 +24,7 @@ import dynamic from "next/dynamic";
 import axios from "axios";
 
 // Dynamically import the ProfileButton with SSR turned off
-const ProfileButton = dynamic(() => import("@/app/dashboard/ProfileButton"), {
+const ProfileButton = dynamic(() => import("@/components/ProfileButton"), {
   ssr: false,
 });
 
