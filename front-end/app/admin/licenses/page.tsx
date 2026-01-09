@@ -1,14 +1,21 @@
-"use client"
+"use client";
 
-import { Label } from "@/components/ui/label"
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import axios from "axios";
 
-import { useEffect, useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -16,8 +23,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+
 import {
   CheckCircle,
   XCircle,
@@ -26,549 +34,280 @@ import {
   Eye,
   FileText,
   Filter,
-  AlertTriangle,
   Calendar,
   Building2,
   Mail,
   ArrowUpDown,
-} from "lucide-react"
-import axios from "axios"
+} from "lucide-react";
 
 type Business = {
-  _id: string,
-  companyName: string,
-  companyEmail?: string,
-  businessType: string,
-  registrationNumber: string,
-  country: string,
-  address: string,
-  phoneNumber: string,
-  website: string,
-  description: string,
-  role: string,
-  verified: boolean,
-  submittedBy: string,
-  createdAt: Date,
-  updatedAt: Date
-}
+  _id: string;
+  companyName: string;
+  companyEmail?: string;
+  role: string;
+  country: string;
+};
 
-interface LicenseSubmissionDB {
-  _id: string
-  filename: string
-  mimetype: string
-  data: string
-  uploadedAt: string
-  verificationStatus: "pending" | "approved" | "rejected"
-  rejectionReason?: string
-  verifiedBy?: string
-  verifiedAt?: string
-  createdAt: Date
-  updatedAt: Date
-  businessId: Business
-}
+type VerificationStatus = "pending" | "approved" | "rejected";
 
-// License submission type
-interface LicenseSubmission {
-  id: number
-  companyName: string
-  companyEmail: string
-  submissionDate: string
-  documentType: string
-  status: "pending" | "approved" | "rejected"
-  documentUrl: string
-  rejectionReason?: string
-  approvedDate?: string
-  priority: "normal" | "high" | "low"
-  notes?: string
-  submitterName: string
-  businessType: string
-  country: string
-}
-
-interface LicenseCounts {
+type LicenseCounts = {
   pending: number;
   approved: number;
   rejected: number;
-}
+};
+
+// ✅ List view type (NO base64 `data`)
+type LicenseSubmissionMeta = {
+  _id: string;
+  filename: string;
+  mimetype: string;
+  uploadedAt: string;
+  verificationStatus: VerificationStatus;
+  rejectionReason?: string;
+  verifiedBy?: string;
+  verifiedAt?: string;
+  businessId: Business;
+};
+
+// ✅ Full document type (WITH base64 `data`)
+type LicenseSubmissionFull = LicenseSubmissionMeta & {
+  data: string;
+};
+
+type SortBy = "date-desc" | "date-asc" | "company-asc" | "company-desc";
 
 export default function AdminLicensesPage() {
-  // Mock data for license submissions
-  const [licenseSubmission, setLicenseSubmission] = useState<LicenseSubmission[]>([
-    {
-      id: 1,
-      companyName: "Global Fashion Co.",
-      companyEmail: "admin@globalfashion.com",
-      submissionDate: "2024-05-28",
-      documentType: "Business Registration",
-      status: "pending",
-      documentUrl: "/placeholder.svg?height=600&width=400",
-      priority: "high",
-      submitterName: "John Smith",
-      businessType: "Manufacturer",
-      country: "Indonesia",
-    },
-    {
-      id: 2,
-      companyName: "Textile Innovations Ltd.",
-      companyEmail: "contact@textileinnovations.com",
-      submissionDate: "2024-05-27",
-      documentType: "Manufacturing License",
-      status: "pending",
-      documentUrl: "/placeholder.svg?height=600&width=400",
-      priority: "normal",
-      submitterName: "Sarah Chen",
-      businessType: "Manufacturer",
-      country: "China",
-    },
-    {
-      id: 3,
-      companyName: "EcoWear Solutions",
-      companyEmail: "info@ecowear.com",
-      submissionDate: "2024-05-26",
-      documentType: "Import License",
-      status: "pending",
-      documentUrl: "/placeholder.svg?height=600&width=400",
-      priority: "low",
-      submitterName: "Mike Johnson",
-      businessType: "Importer",
-      country: "Vietnam",
-    },
-    {
-      id: 4,
-      companyName: "Fashion Forward Co.",
-      companyEmail: "support@fashionforward.com",
-      submissionDate: "2024-05-25",
-      documentType: "Business Registration",
-      status: "approved",
-      documentUrl: "/placeholder.svg?height=600&width=400",
-      approvedDate: "2024-05-26",
-      priority: "normal",
-      submitterName: "Lisa Wong",
-      businessType: "Importer",
-      country: "Thailand",
-    },
-    {
-      id: 5,
-      companyName: "Denim Masters",
-      companyEmail: "info@denimmasters.com",
-      submissionDate: "2024-05-24",
-      documentType: "Manufacturing License",
-      status: "rejected",
-      documentUrl: "/placeholder.svg?height=600&width=400",
-      rejectionReason: "Document is expired. Please submit a current business license.",
-      priority: "normal",
-      submitterName: "David Kim",
-      businessType: "Manufacturer",
-      country: "Indonesia",
-    },
-  ])
+  const [tabStatus, setTabStatus] = useState<VerificationStatus | "all">("pending");
+  const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearch = useDeferredValue(searchQuery);
 
-  const [licenseSubmissionDB, setLicenseSubmissionDB] = useState<LicenseSubmissionDB[]>([])
-  const [verificationStatus, setVerificationStatus] = useState("pending");
-  // State for search and filters
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [priorityFilter, setPriorityFilter] = useState<string>("all")
-  const [sortBy, setSortBy] = useState<string>("date-desc")
-  const [counts, setCounts] = useState<LicenseCounts>({
-    pending: 0,
-    approved: 0,
-    rejected: 0,
-  });
+  const [sortBy, setSortBy] = useState<SortBy>("date-desc");
+  const [counts, setCounts] = useState<LicenseCounts>({ pending: 0, approved: 0, rejected: 0 });
 
-  // State for rejection dialog
-  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false)
-  const [rejectionReason, setRejectionReason] = useState("")
-  const [selectedSubmissionId, setSelectedSubmissionId] = useState<number | string | null>(null)
+  const [licenses, setLicenses] = useState<LicenseSubmissionMeta[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // State for document preview dialog
-  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false)
-  const [previewSubmission, setPreviewSubmission] = useState<LicenseSubmission | LicenseSubmissionDB | null>(null)
-  const [previewSubmissionDB, setPreviewSubmissionDB] = useState<LicenseSubmissionDB | null>(null)
+  // dialogs
+  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
- 
+  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
+  const [previewMeta, setPreviewMeta] = useState<LicenseSubmissionMeta | null>(null);
 
-  // Filter and sort submissions
-  const filteredSubmissions = licenseSubmission
-    .filter((submission) => {
-      // Search filter
-      const matchesSearch =
-        submission.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        submission.companyEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        submission.submitterName.toLowerCase().includes(searchQuery.toLowerCase())
+  // cache full docs so reopening preview doesn’t refetch
+  const [docCache, setDocCache] = useState<Record<string, LicenseSubmissionFull>>({});
+  const previewFull = previewMeta?._id ? docCache[previewMeta._id] : undefined;
 
-      // Status filter
-      const matchesStatus = statusFilter === "all" || submission.status === statusFilter
-
-      // Priority filter
-      const matchesPriority = priorityFilter === "all" || submission.priority === priorityFilter
-
-      return matchesSearch && matchesStatus && matchesPriority
-    })
-    .sort((a, b) => {
-      // Sort by selected criteria
-      switch (sortBy) {
-        case "date-asc":
-          return new Date(a.submissionDate).getTime() - new Date(b.submissionDate).getTime()
-        case "date-desc":
-          return new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime()
-        case "company-asc":
-          return a.companyName.localeCompare(b.companyName)
-        case "company-desc":
-          return b.companyName.localeCompare(a.companyName)
-        case "priority-high":
-          const priorityOrder = { high: 0, normal: 1, low: 2 }
-          return priorityOrder[a.priority] - priorityOrder[b.priority]
-        default:
-          return new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime()
-      }
-    })
-
-    const filteredSubmissionsDB = licenseSubmissionDB
-    .filter((submission) => {
-      // Search filter
-      const matchesSearch =
-        submission.businessId.companyName.toLowerCase().includes(searchQuery.toLowerCase())
-
-      // Status filter
-      const matchesStatus = statusFilter === "all" || submission.verificationStatus === statusFilter
-
-      // Priority filter
-      //const matchesPriority = priorityFilter === "all" || submission.priority === priorityFilter
-
-      return matchesSearch && matchesStatus //&& matchesPriority
-    })
-    .sort((a, b) => {
-      // Sort by selected criteria
-      switch (sortBy) {
-        case "date-asc":
-          return new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime()
-        case "date-desc":
-          return new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
-        case "company-asc":
-          return a.businessId.companyName.localeCompare(b.businessId.companyName)
-        case "company-desc":
-          return b.businessId.companyName.localeCompare(a.businessId.companyName)
-        default:
-          return new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
-      }
-    })
-
-  // Handle approval of a license submission
-  const handleApprove = (submissionId: number) => {
-    setLicenseSubmission(
-      licenseSubmission.map((submission) =>
-        submission.id === submissionId
-          ? {
-              ...submission,
-              status: "approved",
-              approvedDate: new Date().toISOString().split("T")[0],
-            }
-          : submission,
-      ),
-    )
-  }
-
-  const handleApproveDB = async (submissionId: string) => {
-    setLicenseSubmissionDB(
-      licenseSubmissionDB.map((submission) =>
-        submission._id === submissionId
-          ? {
-              ...submission,
-              verificationStatus: "approved",
-              approvedAt: new Date().toISOString().split("T")[0],
-            }
-          : submission,
-      ),
-    )
-
-    try {
-      const req = await axios.patch("/api/admin/licenses", {
-        licenseId: submissionId,
-        verificationStatus: "approved"
-      })
-      console.log("License approval success:", req.data);
-    } catch (error: any) {
-      console.error("Failed to approve license:", error.message);
-    }
-  }
-
-  // Open rejection dialog
-  const openRejectionDialog = (submissionId: number | string) => {
-    setSelectedSubmissionId(submissionId)
-    setRejectionReason("")
-    setIsRejectionDialogOpen(true)
-  }
-
-  // Handle rejection of a license submission
-  const handleReject = () => {
-    if (!rejectionReason.trim()) {
-      alert("Rejection reason is required")
-      return
-    }
-
-    setLicenseSubmission(
-      licenseSubmission.map((submission) =>
-        submission.id === selectedSubmissionId
-          ? {
-              ...submission,
-              status: "rejected",
-              rejectionReason: rejectionReason,
-            }
-          : submission,
-      ),
-    )
-
-    setIsRejectionDialogOpen(false)
-    setRejectionReason("")
-    setSelectedSubmissionId(null)
-  }
-
-  const handleRejectDB = async () => {
-    if (!rejectionReason.trim()) {
-      alert("Rejection reason is required")
-      return
-    }
-
-    setLicenseSubmissionDB(
-      licenseSubmissionDB.map((submission) =>
-        submission._id === selectedSubmissionId
-          ? {
-              ...submission,
-              verificationStatus: "rejected",
-              rejectionReason: rejectionReason,
-            }
-          : submission,
-      ),
-    )
-
-    try {
-      const req = await axios.patch("/api/admin/licenses", {
-        licenseId: selectedSubmissionId,
-        verificationStatus: "rejected",
-        rejectionReason
-      })
-      console.log("Reject successful:", req.data)
-    } catch (error: any) {
-      console.error("Reject failed:", error.response?.data || error.message);
-    }
-
-    setIsRejectionDialogOpen(false)
-    setRejectionReason("")
-    setSelectedSubmissionId(null)
-  }
-
-  // Open document preview dialog
-  const openPreviewDialog = (submission: LicenseSubmission | LicenseSubmissionDB ) => {
-    setPreviewSubmission(submission)
-    setIsPreviewDialogOpen(true)
-  }
-
-  const openPreviewDialogDB = (submission:LicenseSubmissionDB ) => {
-    setPreviewSubmissionDB(submission)
-    setIsPreviewDialogOpen(true)
-  }
-
-  // Get counts for each status
-  const pendingCount = licenseSubmission.filter((s) => s.status === "pending").length
-  const approvedCount = licenseSubmission.filter((s) => s.status === "approved").length
-  const rejectedCount = licenseSubmission.filter((s) => s.status === "rejected").length
- 
-  const pendingCountDB = counts.pending;
-  const approvedCountDB = counts.approved;
-  const rejectedCountDB = counts.rejected;
-
-  // Get status badge
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "pending":
-        return (
-          <Badge className="bg-yellow-100 text-yellow-800">
-            <Clock className="h-3 w-3 mr-1" />
-            Pending Review
-          </Badge>
-        )
-      case "approved":
-        return (
-          <Badge className="bg-emerald-100 text-emerald-800">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Approved
-          </Badge>
-        )
-      case "rejected":
-        return (
-          <Badge className="bg-red-100 text-red-800">
-            <XCircle className="h-3 w-3 mr-1" />
-            Rejected
-          </Badge>
-        )
-      default:
-        return null
-    }
-  }
-
-  // Get priority badge
-  const getPriorityBadge = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return <Badge className="bg-red-100 text-red-800">High Priority</Badge>
-      case "normal":
-        return <Badge className="bg-blue-100 text-blue-800">Normal</Badge>
-      case "low":
-        return <Badge className="bg-slate-100 text-slate-800">Low Priority</Badge>
-      default:
-        return null
-    }
-  }
-
+  // =========================
+  // Fetch list (metadata only)
+  // =========================
   useEffect(() => {
-    const fetchLicense = async () => {
+    const controller = new AbortController();
+
+    const fetchLicenses = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+
       try {
-        console.log(verificationStatus)
-        const response = await axios.get(`/api/admin/licenses?status=${verificationStatus}`);
-        const licenses = response.data.data;
-        const counts = response.data.counts;
-        setCounts(counts);
-        setLicenseSubmissionDB(licenses);
-        console.log(response);
-        
-      } catch (error: any) {
-        console.error("Fetch license failed:", error.response?.data || error.message);
+        const res = await axios.get(`/api/admin/licenses?status=${tabStatus}`, {
+          signal: controller.signal,
+        });
+
+        setLicenses(res.data.data ?? []);
+        setCounts(res.data.counts ?? { pending: 0, approved: 0, rejected: 0 });
+      } catch (err: any) {
+        if (err?.name === "CanceledError") return;
+        setLoadError(err?.response?.data?.message || err?.message || "Failed to fetch licenses");
+      } finally {
+        setIsLoading(false);
       }
+    };
+
+    fetchLicenses();
+
+    return () => controller.abort();
+  }, [tabStatus]);
+
+  // =========================
+  // Derived filtered + sorted
+  // =========================
+  const filtered = useMemo(() => {
+    const q = deferredSearch.trim().toLowerCase();
+
+    const base = licenses.filter((s) => {
+      const matchesSearch = q === "" || s.businessId.companyName.toLowerCase().includes(q);
+      const matchesTab = tabStatus === "all" || s.verificationStatus === tabStatus;
+      return matchesSearch && matchesTab;
+    });
+
+    const sorted = [...base].sort((a, b) => {
+      switch (sortBy) {
+        case "date-asc":
+          return new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime();
+        case "date-desc":
+          return new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime();
+        case "company-asc":
+          return a.businessId.companyName.localeCompare(b.businessId.companyName);
+        case "company-desc":
+          return b.businessId.companyName.localeCompare(a.businessId.companyName);
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [licenses, deferredSearch, tabStatus, sortBy]);
+
+  // =========================
+  // Mutations (approve/reject)
+  // =========================
+  const patchStatus = useCallback(
+    async (licenseId: string, next: VerificationStatus, reason?: string) => {
+      // optimistic update + rollback
+      const prev = licenses;
+      setLicenses((cur) =>
+        cur.map((x) =>
+          x._id === licenseId
+            ? {
+                ...x,
+                verificationStatus: next,
+                rejectionReason: next === "rejected" ? reason : undefined,
+                verifiedAt: next === "approved" ? new Date().toISOString() : x.verifiedAt,
+              }
+            : x,
+        ),
+      );
+
+      try {
+        await axios.patch("/api/admin/licenses", {
+          licenseId,
+          verificationStatus: next,
+          rejectionReason: next === "rejected" ? reason : undefined,
+        });
+      } catch (e) {
+        setLicenses(prev); // rollback
+        throw e;
+      }
+    },
+    [licenses],
+  );
+
+  const handleApprove = useCallback(
+    async (id: string) => {
+      try {
+        await patchStatus(id, "approved");
+      } catch (err: any) {
+        console.error("Approve failed:", err?.response?.data || err?.message);
+      }
+    },
+    [patchStatus],
+  );
+
+  const openRejectionDialog = useCallback((id: string) => {
+    setSelectedId(id);
+    setRejectionReason("");
+    setIsRejectionDialogOpen(true);
+  }, []);
+
+  const handleReject = useCallback(async () => {
+    if (!selectedId) return;
+    if (!rejectionReason.trim()) return;
+
+    try {
+      await patchStatus(selectedId, "rejected", rejectionReason.trim());
+      setIsRejectionDialogOpen(false);
+      setSelectedId(null);
+      setRejectionReason("");
+    } catch (err: any) {
+      console.error("Reject failed:", err?.response?.data || err?.message);
     }
-    fetchLicense();
-  }, [verificationStatus]);
-  
-  console.log(licenseSubmissionDB);
+  }, [selectedId, rejectionReason, patchStatus]);
+
+  // =========================
+  // Preview (fetch on demand)
+  // =========================
+  const openPreview = useCallback(async (meta: LicenseSubmissionMeta) => {
+    setPreviewMeta(meta);
+    setIsPreviewDialogOpen(true);
+
+    if (docCache[meta._id]) return;
+
+    try {
+      const res = await axios.get(`/api/admin/licenses/${meta._id}`);
+      const full: LicenseSubmissionFull = res.data.data;
+
+      setDocCache((cur) => ({ ...cur, [meta._id]: full }));
+    } catch (err: any) {
+      console.error("Preview fetch failed:", err?.response?.data || err?.message);
+    }
+  }, [docCache]);
+
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header 
-      <header className="bg-white border-b px-6 py-4"> 
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">License Management</h1>
-            <p className="text-slate-600">Review and manage business license submissions</p>
+      <div className="p-6 space-y-6">
+        {/* top bar */}
+        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+          <div className="relative w-full md:w-96">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+            <Input
+              placeholder="Search by company name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
-          <div className="flex items-center space-x-2">
-            <Badge className="bg-yellow-100 text-yellow-800">
-              <AlertTriangle className="h-3 w-3 mr-1" />
-              {pendingCountDB} Pending
-            </Badge>
-            <Badge className="bg-emerald-100 text-emerald-800">
-              <CheckCircle className="h-3 w-3 mr-1" />
-              {approvedCountDB} Approved
-            </Badge>
-            <Badge className="bg-red-100 text-red-800">
-              <XCircle className="h-3 w-3 mr-1" />
-              {rejectedCountDB} Rejected
-            </Badge>
+
+          <div className="flex flex-wrap gap-2">
+            <Select value={tabStatus} onValueChange={(v) => setTabStatus(v as any)}>
+              <SelectTrigger className="w-[170px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  All ({counts.pending + counts.approved + counts.rejected})
+                </SelectItem>
+                <SelectItem value="pending">Pending ({counts.pending})</SelectItem>
+                <SelectItem value="approved">Approved ({counts.approved})</SelectItem>
+                <SelectItem value="rejected">Rejected ({counts.rejected})</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
+              <SelectTrigger className="w-[180px]">
+                <ArrowUpDown className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date-desc">Newest First</SelectItem>
+                <SelectItem value="date-asc">Oldest First</SelectItem>
+                <SelectItem value="company-asc">Company (A-Z)</SelectItem>
+                <SelectItem value="company-desc">Company (Z-A)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
-      </header>*/}
 
-      <div className="p-6">
-        <Tabs
-          defaultValue="pending"
-          value={verificationStatus}
-          onValueChange={(value) => setVerificationStatus(value)}
-          className="space-y-6"
-        >
-          {/**
-          <TabsList>
-            <TabsTrigger value="pending">Pending Review ({pendingCount}) </TabsTrigger>
-            <TabsTrigger value="all">All Submissions</TabsTrigger>
-            <TabsTrigger value="approved">Approved</TabsTrigger>
-            <TabsTrigger value="rejected">Rejected</TabsTrigger>
-          </TabsList> */}
+        {loadError && (
+          <Card>
+            <CardContent className="p-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">
+              {loadError}
+            </CardContent>
+          </Card>
+        )}
 
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-            {/* Search */}
-            <div className="relative w-full md:w-96">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-              <Input
-                placeholder="Search by company name or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap gap-2">
-              <Select
-                value={statusFilter}
-                onValueChange={(value) => {
-                  setStatusFilter(value)
-                  setVerificationStatus(value)
-                }}
-              >
-                <SelectTrigger className="w-[150px]">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-              {/**
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priorities</SelectItem>
-                  <SelectItem value="high">High Priority</SelectItem>
-                  <SelectItem value="normal">Normal Priority</SelectItem>
-                  <SelectItem value="low">Low Priority</SelectItem>
-                </SelectContent>
-              </Select> */}
-
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[180px]">
-                  <ArrowUpDown className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date-desc">Newest First</SelectItem>
-                  <SelectItem value="date-asc">Oldest First</SelectItem>
-                  <SelectItem value="company-asc">Company (A-Z)</SelectItem>
-                  <SelectItem value="company-desc">Company (Z-A)</SelectItem>
-                  {/**<SelectItem value="priority-high">Priority (High-Low)</SelectItem>*/}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <TabsContent value="pending" className="space-y-6">
-            {filteredSubmissionsDB.filter((s) => s.verificationStatus === "pending").length === 0 ? (
+        <Tabs value={tabStatus} onValueChange={(v) => setTabStatus(v as any)} className="space-y-6">
+          <TabsContent value={tabStatus} className="space-y-4">
+            {isLoading ? (
               <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <CheckCircle className="h-12 w-12 text-emerald-600 mb-4" />
-                  <h3 className="text-lg font-medium text-slate-800 mb-2">No pending submissions</h3>
-                  <p className="text-slate-600">All business license submissions have been reviewed.</p>
+                <CardContent className="p-6">
+                  <div className="h-4 w-40 bg-slate-200 rounded animate-pulse mb-3" />
+                  <div className="h-4 w-64 bg-slate-200 rounded animate-pulse" />
                 </CardContent>
               </Card>
-            ) : (
-              filteredSubmissionsDB
-                .filter((submission) => submission.verificationStatus === "pending")
-                .map((submission) => (
-                  <SubmissionCardDB
-                    key={submission._id}
-                    submission={submission}
-                    onApprove={handleApproveDB}
-                    onReject={openRejectionDialog}
-                    onPreview={openPreviewDialogDB}
-                  />
-                ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="all" className="space-y-6">
-            {filteredSubmissionsDB.length === 0 ? (
+            ) : filtered.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <FileText className="h-12 w-12 text-slate-400 mb-4" />
@@ -577,63 +316,15 @@ export default function AdminLicensesPage() {
                 </CardContent>
               </Card>
             ) : (
-              filteredSubmissionsDB.map((submission) => (
+              filtered.map((s) => (
                 <SubmissionCardDB
-                  key={submission._id}
-                  submission={submission}
-                  onApprove={handleApproveDB}
+                  key={s._id}
+                  submission={s}
+                  onApprove={handleApprove}
                   onReject={openRejectionDialog}
-                  onPreview={openPreviewDialogDB}
+                  onPreview={openPreview}
                 />
               ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="approved" className="space-y-6">
-            {filteredSubmissionsDB.filter((s) => s.verificationStatus === "approved").length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <FileText className="h-12 w-12 text-slate-400 mb-4" />
-                  <h3 className="text-lg font-medium text-slate-800 mb-2">No approved submissions</h3>
-                  <p className="text-slate-600">No business licenses have been approved yet.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredSubmissionsDB
-                .filter((submission) => submission.verificationStatus === "approved")
-                .map((submission) => (
-                  <SubmissionCardDB
-                    key={submission._id}
-                    submission={submission}
-                    onApprove={handleApproveDB}
-                    onReject={openRejectionDialog}
-                    onPreview={openPreviewDialogDB}
-                  />
-                ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="rejected" className="space-y-6">
-            {filteredSubmissionsDB.filter((s) => s.verificationStatus === "rejected").length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <FileText className="h-12 w-12 text-slate-400 mb-4" />
-                  <h3 className="text-lg font-medium text-slate-800 mb-2">No rejected submissions</h3>
-                  <p className="text-slate-600">No business licenses have been rejected.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredSubmissionsDB
-                .filter((submission) => submission.verificationStatus === "rejected")
-                .map((submission) => (
-                  <SubmissionCardDB
-                    key={submission._id}
-                    submission={submission}
-                    onApprove={handleApproveDB}
-                    onReject={openRejectionDialog}
-                    onPreview={openPreviewDialogDB}
-                  />
-                ))
             )}
           </TabsContent>
         </Tabs>
@@ -648,30 +339,31 @@ export default function AdminLicensesPage() {
               Please provide a reason for rejection. This will be sent to the business owner.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="rejection-reason" className="text-right">
-                Rejection Reason <span className="text-red-500">*</span>
-              </Label>
-              <Textarea
-                id="rejection-reason"
-                placeholder="Enter detailed reason for rejection..."
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                rows={5}
-                className="resize-none"
-                required
-              />
-              {rejectionReason.trim() === "" && <p className="text-sm text-red-500">Rejection reason is required</p>}
-            </div>
+
+          <div className="space-y-2 py-2">
+            <Label htmlFor="rejection-reason">
+              Rejection Reason <span className="text-red-500">*</span>
+            </Label>
+            <Textarea
+              id="rejection-reason"
+              placeholder="Enter detailed reason for rejection..."
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              rows={5}
+              className="resize-none"
+            />
+            {!rejectionReason.trim() && (
+              <p className="text-sm text-red-500">Rejection reason is required</p>
+            )}
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRejectionDialogOpen(false)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={handleRejectDB}
+              onClick={handleReject}
               disabled={!rejectionReason.trim()}
               className="bg-red-600 hover:bg-red-700"
             >
@@ -682,15 +374,16 @@ export default function AdminLicensesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Document Preview Dialog */}
+      {/* Preview Dialog */}
       <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>License Document Preview</DialogTitle>
             <DialogDescription>
-              {previewSubmissionDB?.businessId.companyName} - {previewSubmissionDB?.mimetype}
+              {previewMeta?.businessId.companyName} - {previewMeta?.mimetype}
             </DialogDescription>
           </DialogHeader>
+
           <div className="space-y-6">
             {/* Company Info */}
             <div className="grid md:grid-cols-2 gap-4">
@@ -699,28 +392,34 @@ export default function AdminLicensesPage() {
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <Building2 className="h-4 w-4 text-slate-400 mr-2" />
-                    <span className="font-medium">{previewSubmissionDB?.businessId.companyName}</span>
+                    <span className="font-medium">{previewMeta?.businessId.companyName}</span>
                   </div>
                   <div className="flex items-center">
                     <Mail className="h-4 w-4 text-slate-400 mr-2" />
-                    <span>{previewSubmissionDB?.businessId.companyEmail}</span>
+                    <span>{previewMeta?.businessId.companyEmail || "N/A"}</span>
                   </div>
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 text-slate-400 mr-2" />
-                    <span>Submitted: {previewSubmissionDB?.uploadedAt.split("T")[0]}</span>
+                    <span>Submitted: {previewMeta?.uploadedAt.split("T")[0]}</span>
                   </div>
                 </div>
               </div>
+
               <div>
                 <h3 className="font-medium text-sm text-slate-500 mb-1">Document Details</h3>
                 <div className="space-y-2">
                   <div className="flex items-start">
                     <FileText className="h-4 w-4 text-slate-400 mr-2 mt-0.5" />
-                    <span>{previewSubmissionDB?.mimetype}</span>
+                    <span>{previewMeta?.mimetype}</span>
                   </div>
                   <div className="flex items-center">
-                    <Badge className="mr-2">{previewSubmissionDB?.businessId.role ? previewSubmissionDB?.businessId.role.charAt(0).toUpperCase() + previewSubmissionDB?.businessId.role.slice(1).toLowerCase() : "N/A"}</Badge>
-                    <Badge variant="outline">{previewSubmissionDB?.businessId.country}</Badge>
+                    <Badge className="mr-2">
+                      {previewMeta?.businessId.role
+                        ? previewMeta.businessId.role.charAt(0).toUpperCase() +
+                          previewMeta.businessId.role.slice(1).toLowerCase()
+                        : "N/A"}
+                    </Badge>
+                    <Badge variant="outline">{previewMeta?.businessId.country}</Badge>
                   </div>
                 </div>
               </div>
@@ -728,26 +427,40 @@ export default function AdminLicensesPage() {
 
             {/* Document Preview */}
             <div className="border rounded-lg overflow-hidden">
-              <div className="bg-slate-100 p-2 text-center text-sm text-slate-600">Document Preview</div>
+              <div className="bg-slate-100 p-2 text-center text-sm text-slate-600">
+                Document Preview
+              </div>
+
               <div className="flex justify-center p-4 bg-white">
-                <img
-                  src={previewSubmissionDB ? `data:${previewSubmissionDB?.mimetype};base64,${previewSubmissionDB.data}` : "/placeholder.svg"}
-                  alt="License Document"
-                  className="max-h-[500px] object-contain"
-                />
+                {!previewMeta ? null : !previewFull ? (
+                  <div className="w-full max-w-xl">
+                    <div className="h-4 w-40 bg-slate-200 rounded animate-pulse mb-3" />
+                    <div className="h-80 w-full bg-slate-200 rounded animate-pulse" />
+                  </div>
+                ) : previewFull.mimetype.includes("pdf") ? (
+                  <iframe
+                    title="PDF Preview"
+                    className="w-full h-[520px]"
+                    src={`data:application/pdf;base64,${previewFull.data}`}
+                  />
+                ) : (
+                  <img
+                    src={`data:${previewFull.mimetype};base64,${previewFull.data}`}
+                    alt="License Document"
+                    className="max-h-[520px] object-contain"
+                  />
+                )}
               </div>
             </div>
 
             {/* Action Buttons */}
-            {previewSubmissionDB?.verificationStatus === "pending" && (
-              <div className="flex justify-end space-x-2">
+            {previewMeta?.verificationStatus === "pending" && (
+              <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
                   onClick={() => {
-                    setIsPreviewDialogOpen(false)
-                    if (previewSubmissionDB) {
-                      openRejectionDialog(previewSubmissionDB._id)
-                    }
+                    setIsPreviewDialogOpen(false);
+                    if (previewMeta?._id) openRejectionDialog(previewMeta._id);
                   }}
                   className="text-red-600 hover:text-red-700"
                 >
@@ -756,153 +469,34 @@ export default function AdminLicensesPage() {
                 </Button>
                 <Button
                   onClick={() => {
-                    if (previewSubmissionDB) {
-                      handleApproveDB(previewSubmissionDB._id)
-                      setIsPreviewDialogOpen(false)
-                      console.log("click")
-                    }
+                    if (previewMeta?._id) handleApprove(previewMeta._id);
+                    setIsPreviewDialogOpen(false);
                   }}
                   className="bg-emerald-600 hover:bg-emerald-700"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Approve
                 </Button>
-              </div>
-            )}
-
-            {/* Status Information */}
-            {previewSubmissionDB?.verificationStatus === "approved" && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                <div className="flex items-center">
-                  <CheckCircle className="h-5 w-5 text-emerald-600 mr-2" />
-                  <div>
-                    <h4 className="font-medium text-emerald-800">Approved</h4>
-                    <p className="text-sm text-emerald-700">
-                      This license was approved on {previewSubmissionDB.verifiedAt?.split("T")[0]}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {previewSubmissionDB?.verificationStatus === "rejected" && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-start">
-                  <XCircle className="h-5 w-5 text-red-600 mr-2 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-red-800">Rejected</h4>
-                    <p className="text-sm text-red-700 mt-1">{previewSubmissionDB.rejectionReason}</p>
-                  </div>
-                </div>
               </div>
             )}
           </div>
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
 
-// Submission Card Component
-interface SubmissionCardProps {
-  submission: LicenseSubmission 
-  onApprove: (id: number) => void
-  onReject: (id: number) => void
-  onPreview: (submission: LicenseSubmission) => void
-}
-
-interface SubmissionCardPropsDB {
-  submission: LicenseSubmissionDB
-  onApprove: (id: string) => void
-  onReject: (id: string) => void
-  onPreview: (submission: LicenseSubmissionDB) => void
-}
-
-function SubmissionCard({ submission, onApprove, onReject, onPreview }: SubmissionCardProps) {
-  return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center">
-                <h3 className="font-semibold text-slate-800">{submission.companyName}</h3>
-                {submission.status === "pending" && getPriorityBadge(submission.priority)}
-              </div>
-              <div>{getStatusBadge(submission.status)}</div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
-              <div className="flex items-center text-slate-600">
-                <Mail className="h-4 w-4 mr-2 text-slate-400" />
-                {submission.companyEmail}
-              </div>
-              <div className="flex items-center text-slate-600">
-                <Calendar className="h-4 w-4 mr-2 text-slate-400" />
-                Submitted: {submission.submissionDate}
-              </div>
-              <div className="flex items-center text-slate-600">
-                <FileText className="h-4 w-4 mr-2 text-slate-400" />
-                {submission.documentType}
-              </div>
-              <div className="flex items-center text-slate-600">
-                <Building2 className="h-4 w-4 mr-2 text-slate-400" />
-                {submission.businessType} • {submission.country}
-              </div>
-            </div>
-
-            {/* Show rejection reason if rejected */}
-            {submission.status === "rejected" && (
-              <div className="mt-3 p-3 bg-red-50 rounded-md">
-                <p className="text-sm font-medium text-red-800">Rejection Reason:</p>
-                <p className="text-sm text-red-700">{submission.rejectionReason}</p>
-              </div>
-            )}
-
-            {/* Show approval date if approved */}
-            {submission.status === "approved" && (
-              <div className="mt-3 p-3 bg-emerald-50 rounded-md">
-                <p className="text-sm text-emerald-700">
-                  <span className="font-medium">Approved on:</span> {submission.approvedDate}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-wrap md:flex-nowrap gap-2 justify-end">
-            <Button variant="outline" size="sm" onClick={() => onPreview(submission)}>
-              <Eye className="h-4 w-4 mr-2" />
-              View Document
-            </Button>
-
-            {submission.status === "pending" && (
-              <>
-                <Button
-                  size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-700"
-                  onClick={() => onApprove(submission.id)}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Approve
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-red-600 hover:text-red-700"
-                  onClick={() => onReject(submission.id)}
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Reject
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function SubmissionCardDB({ submission, onApprove, onReject, onPreview }: SubmissionCardPropsDB) {
+function SubmissionCardDB({
+  submission,
+  onApprove,
+  onReject,
+  onPreview,
+}: {
+  submission: LicenseSubmissionMeta;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+  onPreview: (s: LicenseSubmissionMeta) => void;
+}) {
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-6">
@@ -910,14 +504,17 @@ function SubmissionCardDB({ submission, onApprove, onReject, onPreview }: Submis
           <div className="flex-1">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-slate-800">{submission.businessId.companyName}</h3>
+                <h3 className="font-semibold text-slate-800">
+                  {submission.businessId.companyName}
+                </h3>
                 {getStatusBadge(submission.verificationStatus)}
               </div>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
               <div className="flex items-center text-slate-600">
                 <Mail className="h-4 w-4 mr-2 text-slate-400" />
-                {/*{submission.companyEmail}*/}
+                {submission.businessId.companyEmail || "N/A"}
               </div>
               <div className="flex items-center text-slate-600">
                 <Calendar className="h-4 w-4 mr-2 text-slate-400" />
@@ -933,7 +530,6 @@ function SubmissionCardDB({ submission, onApprove, onReject, onPreview }: Submis
               </div>
             </div>
 
-            {/* Show rejection reason if rejected */}
             {submission.verificationStatus === "rejected" && (
               <div className="mt-3 p-3 bg-red-50 rounded-md">
                 <p className="text-sm font-medium text-red-800">Rejection Reason:</p>
@@ -941,11 +537,11 @@ function SubmissionCardDB({ submission, onApprove, onReject, onPreview }: Submis
               </div>
             )}
 
-            {/* Show approval date if approved */}
             {submission.verificationStatus === "approved" && (
               <div className="mt-3 p-3 bg-emerald-50 rounded-md">
                 <p className="text-sm text-emerald-700">
-                  <span className="font-medium">Approved on:</span> {submission.verifiedAt?.split("T")[0]}
+                  <span className="font-medium">Approved on:</span>{" "}
+                  {submission.verifiedAt?.split("T")[0] || "N/A"}
                 </p>
               </div>
             )}
@@ -982,10 +578,9 @@ function SubmissionCardDB({ submission, onApprove, onReject, onPreview }: Submis
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
-// Helper function for status badges
 function getStatusBadge(status: string) {
   switch (status) {
     case "pending":
@@ -994,36 +589,22 @@ function getStatusBadge(status: string) {
           <Clock className="h-3 w-3 mr-1" />
           Pending Review
         </Badge>
-      )
+      );
     case "approved":
       return (
         <Badge className="bg-emerald-100 text-emerald-800">
           <CheckCircle className="h-3 w-3 mr-1" />
           Approved
         </Badge>
-      )
+      );
     case "rejected":
       return (
         <Badge className="bg-red-100 text-red-800">
           <XCircle className="h-3 w-3 mr-1" />
           Rejected
         </Badge>
-      )
+      );
     default:
-      return null
-  }
-}
-
-// Helper function for priority badges
-function getPriorityBadge(priority: string) {
-  switch (priority) {
-    case "high":
-      return <Badge className="ml-2 bg-red-100 text-red-800">High Priority</Badge>
-    case "normal":
-      return <Badge className="ml-2 bg-blue-100 text-blue-800">Normal</Badge>
-    case "low":
-      return <Badge className="ml-2 bg-slate-100 text-slate-800">Low Priority</Badge>
-    default:
-      return null
+      return null;
   }
 }

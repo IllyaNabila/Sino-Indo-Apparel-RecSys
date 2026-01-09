@@ -1,43 +1,45 @@
+// /api/admin/licenses/route.ts
 import { connect } from "@/dbConfig/dbConfig";
 import Business from "@/models/businessModel";
 import BusinessLicense from "@/models/licenseModel";
 import { NextRequest, NextResponse } from "next/server";
-
-connect();
+import mongoose from "mongoose";
 
 export async function GET(request: NextRequest) {
-  await connect(); //ensures both connection + model registration
+  await connect();
+
   try {
-    const verificationStatus = request.nextUrl.searchParams
-      .get("status")
-      ?.toLowerCase();
-    let licenses;
-    console.log(verificationStatus);
+    const statusParam = request.nextUrl.searchParams.get("status")?.toLowerCase();
+    const status = statusParam && statusParam !== "all" ? statusParam : null;
 
-    if (!verificationStatus || verificationStatus === "all") {
-      licenses = await BusinessLicense.find()
-        .populate("businessId")
-        .sort({ uploadedAt: 1 });
-    } else {
-      licenses = await BusinessLicense.find({ verificationStatus })
-        .populate("businessId")
-        .sort({ uploadedAt: 1 });
-    }
+    // pagination (optional, but strongly recommended)
+    {/** 
+    const page = Math.max(1, Number(request.nextUrl.searchParams.get("page") ?? 1));
+    const limit = Math.min(50, Math.max(1, Number(request.nextUrl.searchParams.get("limit") ?? 10)));
+    const skip = (page - 1) * limit;*/}
 
-    const totalPending = await BusinessLicense.countDocuments({
-      verificationStatus: "pending",
-    });
-    const totalApproved = await BusinessLicense.countDocuments({
-      verificationStatus: "approved",
-    });
-    const totalRejected = await BusinessLicense.countDocuments({
-      verificationStatus: "rejected",
-    });
+    const filter = status ? { verificationStatus: status } : {};
+
+    const [licenses, pending, approved, rejected, total] = await Promise.all([
+      BusinessLicense.find(filter)
+        .select("-data") // ✅ exclude base64 blob
+        .populate({
+          path: "businessId",
+          select: "companyName companyEmail role country", // ✅ keep light
+        })
+        .sort({ uploadedAt: -1 }) // newest first
+        .lean(),
+      BusinessLicense.countDocuments({ verificationStatus: "pending" }),
+      BusinessLicense.countDocuments({ verificationStatus: "approved" }),
+      BusinessLicense.countDocuments({ verificationStatus: "rejected" }),
+      BusinessLicense.countDocuments(filter),
+    ]);
 
     return NextResponse.json({
       success: true,
       data: licenses,
-      counts: { totalPending, totalApproved, totalRejected },
+      counts: { pending, approved, rejected },
+      pageInfo: { total },
     });
   } catch (error: any) {
     console.error("Error fetching business licenses:", error);
@@ -49,61 +51,81 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  await connect();
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    const reqBody = await request.json();
-    const { licenseId, verificationStatus, rejectionReason } = reqBody;
-  
+    const { licenseId, verificationStatus, rejectionReason } = await request.json();
+
     if (!licenseId || !verificationStatus) {
+      await session.abortTransaction();
       return NextResponse.json(
         { success: false, message: "Missing required fields" },
         { status: 400 }
       );
     }
-    
-    const license = await BusinessLicense.findById({_id: licenseId});
-    if (!license) return NextResponse.json({ success: false, message: "License not found"});
 
-    const verified = verificationStatus === "approved";
-    const updateData: any = {
-      verificationStatus,
-      verifiedAt: new Date()
-    };
-  
-    if (verificationStatus === "rejected" && !rejectionReason) {
+    if (!["pending", "approved", "rejected"].includes(verificationStatus)) {
+      await session.abortTransaction();
+      return NextResponse.json(
+        { success: false, message: "Invalid verificationStatus" },
+        { status: 400 }
+      );
+    }
+
+    if (verificationStatus === "rejected" && !rejectionReason?.trim()) {
+      await session.abortTransaction();
       return NextResponse.json(
         { success: false, message: "Rejection reason is required for rejected status" },
         { status: 400 }
       );
     }
-  
-    if (verificationStatus === "rejected") {
-      updateData.rejectionReason = rejectionReason;
-    } else {
-      updateData.rejectionReason = null;
+
+    const license = await BusinessLicense.findById(licenseId).session(session);
+    if (!license) {
+      await session.abortTransaction();
+      return NextResponse.json(
+        { success: false, message: "License not found" },
+        { status: 404 }
+      );
     }
 
-    const businessId = license.businessId;
+    const verified = verificationStatus === "approved";
+
+    const updateData: any = {
+      verificationStatus,
+      verifiedAt: new Date(),
+      rejectionReason: verificationStatus === "rejected" ? rejectionReason.trim() : null,
+    };
 
     const updatedLicense = await BusinessLicense.findByIdAndUpdate(
-      { _id: licenseId },
+      licenseId,
       updateData,
-      { new: true},
+      { new: true, session }
     );
 
-    const updatedBusiness = await Business.findByIdAndUpdate( 
-      {_id: businessId }, 
-      { verified }, 
-      { new: true},
+    const updatedBusiness = await Business.findByIdAndUpdate(
+      license.businessId,
+      { verified },
+      { new: true, session }
     );
-  
+
+    await session.commitTransaction();
+
     return NextResponse.json({
-      success: true, data: {updatedLicense, updatedBusiness}
+      success: true,
+      data: { updatedLicense, updatedBusiness },
     });
   } catch (error: any) {
+    await session.abortTransaction();
     console.error("Error updating license:", error);
     return NextResponse.json(
       { success: false, message: "Failed to update license" },
       { status: 500 }
     );
+  } finally {
+    session.endSession();
   }
 }
