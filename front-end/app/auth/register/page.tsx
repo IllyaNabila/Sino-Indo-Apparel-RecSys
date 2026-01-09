@@ -78,8 +78,12 @@ export default function RegisterPage() {
 
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center">
-            <div className="w-12 h-12 bg-emerald-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <span className="text-white font-bold">AB</span>
+            <div className="flex items-center justify-center mx-auto">
+              <img
+                src="/logo-apparelbiz.png"
+                alt="ApparelBiz logo"
+                className="w-20 h-20 rounded-lg object-contain"
+              />
             </div>
             <CardTitle className="text-2xl">Create Your Account</CardTitle>
             <CardDescription>
