@@ -33,6 +33,12 @@ import { Textarea } from "@/components/ui/textarea";
 import axios from "axios";
 import { useSocket } from "@/context/SocketContext";
 import { useBusiness } from "@/context/BusinessContext";
+import dynamic from "next/dynamic";
+
+// Dynamically import the ProfileButton with SSR turned off
+const ProfileButton = dynamic(() => import("@/components/ProfileButton"), {
+  ssr: false,
+});
 
 interface Message {
   id: string;
@@ -603,12 +609,16 @@ const processNLPQuery = async (query: string): Promise<Message> => {
         }),
       });
 
-      const data = await res.json();
-      console.log(res)
+      // 1. Read the JSON only ONCE
+      const data = await res.json(); 
+      console.log("Response Status:", res.status);
+      console.log("Response Data:", data);
+
+      // 2. Check for error using the data we already read
       if (!res.ok) {
-        const errorData = await res.json();
+        // Use 'data' here because it contains the error message from the backend
         throw new Error(
-          errorData.message || `HTTP error! status: ${res.status}`
+          data.message || data.error || `HTTP error! status: ${res.status}`
         );
       }
       setRecommendResult(data.matches);
@@ -1181,10 +1191,13 @@ const processNLPQuery = async (query: string): Promise<Message> => {
               Natural language search powered by AI
             </p>
           </div>
-          <Badge className="bg-purple-100 text-purple-800">
-            <Sparkles className="h-3 w-3 mr-1" />
-            NLP Powered
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge className="bg-purple-100 text-purple-800">
+              <Sparkles className="h-3 w-3 mr-1" />
+              NLP Powered
+            </Badge>
+            <ProfileButton />
+          </div>
         </div>
       </header>
 

@@ -25,6 +25,12 @@ import { useSocket } from "@/context/SocketContext";
 import { ChatMessageContent } from "@/app/chat/ChatMessageContent";
 import { FeedbackForm } from "@/app/chat/FeedbackForm";
 import { CompanyProfileModal } from "@/app/chat/CompanyProfileModal";
+import dynamic from "next/dynamic";
+
+// Dynamically import the ProfileButton with SSR turned off
+const ProfileButton = dynamic(() => import("@/components/ProfileButton"), {
+  ssr: false,
+});
 
 type ConversationUI = {
   id: string;
@@ -368,10 +374,13 @@ console.log(currentChat)
               Connect with verified business partners
             </p>
           </div>
-          <Badge className="bg-emerald-100 text-emerald-800">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Verified Business
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge className="bg-emerald-100 text-emerald-800">
+              <CheckCircle className="h-3 w-3 mr-1" />
+              Verified Business
+            </Badge>
+            <ProfileButton/>
+          </div>
         </div>
       </header>
 

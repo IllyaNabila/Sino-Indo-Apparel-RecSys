@@ -46,7 +46,7 @@ export default function ProfileButton() {
           <span className="text-sm font-semibold leading-none text-slate-900">{companyName}</span>
           <span className="text-xs text-slate-500">{businessObject?.role}</span>
         </div>
-        <ArrowUpRight className="h-4 w-4 text-slate-400 group-hover:text-rose-500 transition-colors" />
+        
       </div>
     </Button>
   );
