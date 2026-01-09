@@ -41,6 +41,7 @@ export async function POST(req: Request) {
       console.log("[DEV] Reset link:", resetLink);
     } else {
       // If you already have mailer helper, call it here
+      console.log("[DEV] Reset link:", resetLink);
       await sendResetEmail(user.email, resetLink);
     }
 
