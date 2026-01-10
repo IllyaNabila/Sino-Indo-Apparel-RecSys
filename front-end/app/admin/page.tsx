@@ -151,9 +151,9 @@ export default function AdminDashboard() {
   const logout = async () => {
     try {
       await axios.post("/api/admin/logout");
-      toast.success("Logged out")
+      toast.success("Logged out successful")
       router.push("/admin/login");
-      router.refresh(); // ensures middleware + UI updates
+      router.refresh();
     } catch (err) {
       toastApiError(err);
     }

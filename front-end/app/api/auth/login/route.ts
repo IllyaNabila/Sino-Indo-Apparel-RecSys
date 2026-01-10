@@ -5,104 +5,75 @@ import { NextRequest, NextResponse } from "next/server";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-connect();
+import {
+  AppError,
+  BadRequestError,
+  ForbiddenError,
+  InvalidJsonError,
+  UnauthorizedError,
+} from "@/lib/errors";
+import { withErrorHandler } from "@/lib/withErrorHandler";
 
-export async function POST(request: NextRequest) {
-  try {
-    const reqBody = await request.json().catch(() => null);
+export const POST = withErrorHandler(async (request: NextRequest) => {
+  await connect();
 
-    if (!reqBody) {
-      return NextResponse.json(
-        { error: "Invalid JSON body" },
-        { status: 400 }
-      );
-    }
+  const reqBody = await request.json().catch((e) => {
+    throw new InvalidJsonError(e);
+  });
 
-    const email = String(reqBody.email ?? "").trim().toLowerCase();
-    const password = String(reqBody.password ?? "");
+  const email = String(reqBody.email ?? "").trim().toLowerCase();
+  const password = String(reqBody.password ?? "");
 
-    // Basic validation
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: "Email and password are required" },
-        { status: 400 }
-      );
-    }
+  if (!email || !password) {
+    throw new BadRequestError("Email and password are required");
+  }
 
-    // (Optional) simple email format check
-    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!emailOk) {
-      return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
-    }
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new UnauthorizedError("Invalid email or password");
+  }
 
-    // Check if user exists
-    const user = await User.findOne({ email });
-    // Use same generic message to avoid user enumeration
-    if (!user) {
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 }
-      );
-    }
+  if (user.role === "admin") {
+    throw new ForbiddenError("You don't have access.");
+  }
 
-    if (user.role === "admin") {
-      return NextResponse.json({ error: "Not allowed" }, { status: 403 });
-    }
+  const validPassword = await bcryptjs.compare(password, user.password);
+  if (!validPassword) {
+    throw new UnauthorizedError("Invalid email or password");
+  }
 
-    // Check password
-    const validPassword = await bcryptjs.compare(password, user.password);
-    if (!validPassword) {
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 }
-      );
-    }
+  const business = await Business.findOne({ submittedBy: user._id });
 
-    // Find associated business (optional relationship)
-    const business = await Business.findOne({ submittedBy: user._id });
+  const tokenData: any = { id: user._id, email: user.email };
+  if (business?._id) tokenData.businessId = business._id;
 
-    // Create token payload
-    const tokenData: any = { id: user._id, email: user.email };
-    if (business?._id) tokenData.businessId = business._id;
+  const secret = process.env.TOKEN_SECRET;
+  if (!secret) {
+    throw new AppError("Server misconfigured (TOKEN_SECRET missing).", 500);
+  }
 
-    const secret = process.env.TOKEN_SECRET;
-    if (!secret) {
-      console.error("TOKEN_SECRET is missing");
-      return NextResponse.json(
-        { error: "Server misconfiguration" },
-        { status: 500 }
-      );
-    }
+  const token = jwt.sign(tokenData, secret, { expiresIn: "1d" });
 
-    const token = jwt.sign(tokenData, secret, { expiresIn: "1d" });
-
-    const res = NextResponse.json(
-      {
+  const res = NextResponse.json(
+    {
+      success: true,
+      data: {
         message: "Login successful",
-        success: true,
         businessId: business?._id ?? null,
         companyName: business?.companyName ?? null,
         businessObject: business ?? null,
       },
-      { status: 200 }
-    );
+    },
+    { status: 200 }
+  );
 
-    res.cookies.set("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // true on HTTPS
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24, // 1 day in seconds
-    });
+  res.cookies.set("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24,
+  });
 
-    return res;
-  } catch (error: any) {
-    // Server-side log, client gets safe message
-    console.error("Login error:", error);
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
+  return res;
+});
