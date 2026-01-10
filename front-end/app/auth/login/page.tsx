@@ -76,6 +76,8 @@ export default function LoginPage() {
           message = "No response from server. Check your internet and try again.";
         } else if (status === 401) {
           message = "Invalid email or password.";
+        } else if (status === 403) {
+          message = "Not allowed.";
         } else if (status === 429) {
           message = "Too many attempts. Please wait a moment and try again.";
         } else if (status && status >= 500) {
