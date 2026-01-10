@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label"
 import { ArrowLeft, Shield } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation";
+import axios from "axios"
+import toast from "react-hot-toast"
+import { toastApiError } from "@/lib/toastApiError"
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -23,22 +26,18 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    const res = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    });
+    try {
+      await axios.post("/api/admin/login", formData, {
+        headers: { "Content-Type": "application/json" },
+      });
 
-    const data = await res.json().catch(() => ({}));
-
-    setLoading(false);
-
-    if (!res.ok) {
-      alert(data?.message || "Login failed");
-      return;
+      toast.success("Login success");
+      router.push("/admin");
+    } catch (err) {
+      toastApiError(err); // reads data.error.message (new) or data.message (old)
+    } finally {
+      setLoading(false);
     }
-
-    router.push("/admin");
   };
 
   return (

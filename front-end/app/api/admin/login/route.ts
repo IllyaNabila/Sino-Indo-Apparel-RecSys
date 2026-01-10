@@ -3,32 +3,33 @@ import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { connect } from "@/dbConfig/dbConfig";
 import User from "@/models/userModel";
+import { AppError, BadRequestError, UnauthorizedError } from "@/lib/errors";
+import { withErrorHandler } from "@/lib/withErrorHandler";
 
-export async function POST(req: Request) {
-  try {
+export const POST = withErrorHandler(async (req: Request) => {
     await connect();
 
     const { email, password } = await req.json();
     const normalizedEmail = String(email || "").trim().toLowerCase();
 
     if (!normalizedEmail || !password) {
-      return NextResponse.json({ message: "Email and password required." }, { status: 400 });
+      throw new BadRequestError("Email and password required.");
     }
 
     // Only allow admin role here
     const admin = await User.findOne({ email: normalizedEmail, role: "admin" });
     if (!admin) {
-      return NextResponse.json({ message: "Invalid admin credentials." }, { status: 401 });
+      throw new UnauthorizedError("Invalid admin credentials.");
     }
 
     const ok = await bcryptjs.compare(String(password), admin.password);
     if (!ok) {
-      return NextResponse.json({ message: "Invalid admin credentials." }, { status: 401 });
+      throw new UnauthorizedError("Invalid admin credentials.");
     }
 
     const TOKEN_SECRET = process.env.TOKEN_SECRET || "";
     if (!TOKEN_SECRET) {
-      return NextResponse.json({ message: "Server misconfigured (TOKEN_SECRET missing)." }, { status: 500 });
+       throw new AppError("Server misconfigured (TOKEN_SECRET missing).", 500);
     }
 
     const token = jwt.sign(
@@ -48,7 +49,4 @@ export async function POST(req: Request) {
     });
 
     return res;
-  } catch {
-    return NextResponse.json({ message: "Server error." }, { status: 500 });
-  }
-}
+});

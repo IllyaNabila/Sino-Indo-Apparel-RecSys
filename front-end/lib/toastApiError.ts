@@ -15,6 +15,7 @@ export function toastApiError(err: unknown) {
     if (code === "UNAUTHORIZED") return toast.error("Invalid credentials.");
     if (code === "FORBIDDEN") return toast.error("You don't have access.");
     if (code === "INVALID_JSON") return toast.error("Invalid form data.");
+    if (code === "ECONNABORTED") return toast.error("Request timed out. Please try again.");
 
     // show backend message for these
     if (code === "NOT_FOUND") return toast.error(message);

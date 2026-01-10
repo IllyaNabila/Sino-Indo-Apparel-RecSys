@@ -25,6 +25,9 @@ import {
   UserCheck,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import axios from "axios"
+import toast from "react-hot-toast"
+import { toastApiError } from "@/lib/toastApiError"
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -146,9 +149,14 @@ export default function AdminDashboard() {
   }
 
   const logout = async () => {
-    await fetch("/api/admin/logout", { method: "POST" });
-    router.push("/admin/login");
-    router.refresh(); // ensures middleware + UI updates
+    try {
+      await axios.post("/api/admin/logout");
+      toast.success("Logged out")
+      router.push("/admin/login");
+      router.refresh(); // ensures middleware + UI updates
+    } catch (err) {
+      toastApiError(err);
+    }
   };
 
 
