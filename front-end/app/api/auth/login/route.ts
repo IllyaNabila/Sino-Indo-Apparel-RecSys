@@ -45,6 +45,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (user.role === "admin") {
+      return NextResponse.json({ error: "Not allowed" }, { status: 403 });
+    }
+
     // Check password
     const validPassword = await bcryptjs.compare(password, user.password);
     if (!validPassword) {
