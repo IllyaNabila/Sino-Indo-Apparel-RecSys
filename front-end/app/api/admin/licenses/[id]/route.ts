@@ -1,29 +1,25 @@
+//api/admin/licenses/[id]/route.ts
 import { connect } from "@/dbConfig/dbConfig";
 import BusinessLicense from "@/models/licenseModel";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withErrorHandler } from "@/lib/withErrorHandler";
+import { NotFoundError, BadRequestError } from "@/lib/errors";
 
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandler(async (request: NextRequest) => {
   await connect();
 
-  try {
-    const parts = request.nextUrl.pathname.split("/");
-    const id = parts[parts.length - 1];
+  const parts = request.nextUrl.pathname.split("/");
+  const id = parts[parts.length - 1];
 
-    const license = await BusinessLicense.findById(id);
-
-    if (!license) {
-      return NextResponse.json(
-        { success: false, message: "License not found" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ success: true, data: license });
-  } catch (error: any) {
-    console.error("Error fetching license:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch license" },
-      { status: 500 }
-    );
+  if (!id) {
+    throw new BadRequestError("License id is required");
   }
-}
+
+  const license = await BusinessLicense.findById(id);
+
+  if (!license) {
+    throw new NotFoundError("License not found");
+  }
+
+  return Response.json({ success: true, data: license }, { status: 200 });
+});
