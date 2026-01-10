@@ -39,6 +39,8 @@ import {
   Mail,
   ArrowUpDown,
 } from "lucide-react";
+import toast from "react-hot-toast";
+import { toastApiError } from "@/lib/toastApiError";
 
 type Business = {
   _id: string;
@@ -186,7 +188,10 @@ export default function AdminLicensesPage() {
           verificationStatus: next,
           rejectionReason: next === "rejected" ? reason : undefined,
         });
+        toast.success(`License ${next}`);
+        setIsRejectionDialogOpen(false)
       } catch (e) {
+        toastApiError(e);
         setLicenses(prev); // rollback
         throw e;
       }

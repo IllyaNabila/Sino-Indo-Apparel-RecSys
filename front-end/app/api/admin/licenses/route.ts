@@ -4,92 +4,80 @@ import Business from "@/models/businessModel";
 import BusinessLicense from "@/models/licenseModel";
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
+import { withErrorHandler } from "@/lib/withErrorHandler";
+import { parseJson } from "@/lib/parseJson";
+import { BadRequestError, NotFoundError, ValidationError } from "@/lib/errors";
 
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandler(async (request: NextRequest) => {
   await connect();
 
-  try {
-    const statusParam = request.nextUrl.searchParams.get("status")?.toLowerCase();
-    const status = statusParam && statusParam !== "all" ? statusParam : null;
+  const statusParam = request.nextUrl.searchParams.get("status")?.toLowerCase();
+  const status = statusParam && statusParam !== "all" ? statusParam : null;
 
-    // pagination (optional, but strongly recommended)
-    {/** 
-    const page = Math.max(1, Number(request.nextUrl.searchParams.get("page") ?? 1));
-    const limit = Math.min(50, Math.max(1, Number(request.nextUrl.searchParams.get("limit") ?? 10)));
-    const skip = (page - 1) * limit;*/}
+  if (
+    statusParam &&
+    !["all", "pending", "approved", "rejected"].includes(statusParam)
+  ) {
+    throw new BadRequestError("Invalid status");
+  }
 
-    const filter = status ? { verificationStatus: status } : {};
+  const filter = status ? { verificationStatus: status } : {};
 
-    const [licenses, pending, approved, rejected, total] = await Promise.all([
-      BusinessLicense.find(filter)
-        .select("-data") // ✅ exclude base64 blob
-        .populate({
-          path: "businessId",
-          select: "companyName companyEmail role country", // ✅ keep light
-        })
-        .sort({ uploadedAt: -1 }) // newest first
-        .lean(),
-      BusinessLicense.countDocuments({ verificationStatus: "pending" }),
-      BusinessLicense.countDocuments({ verificationStatus: "approved" }),
-      BusinessLicense.countDocuments({ verificationStatus: "rejected" }),
-      BusinessLicense.countDocuments(filter),
-    ]);
+  const [licenses, pending, approved, rejected, total] = await Promise.all([
+    BusinessLicense.find(filter)
+      .select("-data") // ✅ exclude base64 blob
+      .populate({
+        path: "businessId",
+        select: "companyName companyEmail role country", // ✅ keep light
+      })
+      .sort({ uploadedAt: -1 }) // newest first
+      .lean(),
+    BusinessLicense.countDocuments({ verificationStatus: "pending" }),
+    BusinessLicense.countDocuments({ verificationStatus: "approved" }),
+    BusinessLicense.countDocuments({ verificationStatus: "rejected" }),
+    BusinessLicense.countDocuments(filter),
+  ]);
 
-    return NextResponse.json({
+  return Response.json(
+    {
       success: true,
       data: licenses,
       counts: { pending, approved, rejected },
       pageInfo: { total },
-    });
-  } catch (error: any) {
-    console.error("Error fetching business licenses:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch licenses" },
-      { status: 500 }
-    );
-  }
-}
+    },
+    { status: 200 }
+  );
+});
 
-export async function PATCH(request: NextRequest) {
+
+export const PATCH = withErrorHandler(async (request: NextRequest) => {
   await connect();
 
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const { licenseId, verificationStatus, rejectionReason } = await request.json();
+    const { licenseId, verificationStatus, rejectionReason } = await parseJson<{
+      licenseId?: string;
+      verificationStatus?: "pending" | "approved" | "rejected";
+      rejectionReason?: string;
+    }>(request);
 
     if (!licenseId || !verificationStatus) {
-      await session.abortTransaction();
-      return NextResponse.json(
-        { success: false, message: "Missing required fields" },
-        { status: 400 }
-      );
+      throw new BadRequestError("Missing required fields");
     }
 
     if (!["pending", "approved", "rejected"].includes(verificationStatus)) {
-      await session.abortTransaction();
-      return NextResponse.json(
-        { success: false, message: "Invalid verificationStatus" },
-        { status: 400 }
-      );
+      throw new ValidationError("Invalid verificationStatus");
     }
 
     if (verificationStatus === "rejected" && !rejectionReason?.trim()) {
-      await session.abortTransaction();
-      return NextResponse.json(
-        { success: false, message: "Rejection reason is required for rejected status" },
-        { status: 400 }
-      );
+      throw new ValidationError("Rejection reason is required for rejected status");
     }
 
     const license = await BusinessLicense.findById(licenseId).session(session);
     if (!license) {
-      await session.abortTransaction();
-      return NextResponse.json(
-        { success: false, message: "License not found" },
-        { status: 404 }
-      );
+      throw new NotFoundError("License not found");
     }
 
     const verified = verificationStatus === "approved";
@@ -97,7 +85,7 @@ export async function PATCH(request: NextRequest) {
     const updateData: any = {
       verificationStatus,
       verifiedAt: new Date(),
-      rejectionReason: verificationStatus === "rejected" ? rejectionReason.trim() : null,
+      rejectionReason: verificationStatus === "rejected" ? rejectionReason?.trim() : null,
     };
 
     const updatedLicense = await BusinessLicense.findByIdAndUpdate(
@@ -114,18 +102,14 @@ export async function PATCH(request: NextRequest) {
 
     await session.commitTransaction();
 
-    return NextResponse.json({
-      success: true,
-      data: { updatedLicense, updatedBusiness },
-    });
-  } catch (error: any) {
-    await session.abortTransaction();
-    console.error("Error updating license:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to update license" },
-      { status: 500 }
+    return Response.json(
+      { success: true, data: { updatedLicense, updatedBusiness } },
+      { status: 200 }
     );
+  } catch (err) {
+    await session.abortTransaction();
+    throw err;
   } finally {
     session.endSession();
   }
-}
+});

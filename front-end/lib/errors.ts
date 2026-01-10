@@ -34,8 +34,8 @@ export class BadRequestError extends AppError {
   }
 }
 export class InvalidJsonError extends AppError {
-  constructor(details?: unknown) {
-    super("Invalid JSON body", 400, "INVALID_JSON", details);
+  constructor(message = "Invalid JSON body", details?: unknown) {
+    super(message, 400, "INVALID_JSON", details);
   }
 }
 export class UnauthorizedError extends AppError {
