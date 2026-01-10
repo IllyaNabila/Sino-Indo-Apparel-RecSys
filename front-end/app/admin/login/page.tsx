@@ -34,7 +34,7 @@ export default function AdminLoginPage() {
       toast.success("Login success");
       router.push("/admin");
     } catch (err) {
-      toastApiError(err); // reads data.error.message (new) or data.message (old)
+      toastApiError(err); 
     } finally {
       setLoading(false);
     }

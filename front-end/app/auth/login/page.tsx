@@ -45,22 +45,34 @@ export default function LoginPage() {
 
     try {
       const response = await axios.post("/api/auth/login", formData, {
-        timeout: 8000, // optional: avoid hanging forever
         headers: { "Content-Type": "application/json" },
       });
 
       toast.success("Login success");
+      console.log(response)
 
-      setBusinessId(response.data.businessId);
-      setCompanyName(response.data.companyName);
-      setBusinessObject(response.data.businessObject);
+      setBusinessId(response.data.data.businessId);
+      setCompanyName(response.data.data.companyName);
+      setBusinessObject(response.data.data.businessObject);
 
       router.push("/dashboard");
     } catch (err: unknown) {
       // Default fallback message
       let message = "Login failed. Please try again.";
 
+      if (axios.isAxiosError(err)) {
+        const data: any = err.response?.data;
+        message = data?.error?.message || // <-- use message
+          data?.message ||
+          data?.error ||          // fallback if older backend sends string error
+          err.message ||
+          "Something went wrong";
+
+        return toast.error(message);
+      }
+      
       // Axios-specific handling
+      {/**
       if (axios.isAxiosError(err)) {
         const status = err.response?.status;
 
@@ -89,6 +101,7 @@ export default function LoginPage() {
 
       // Log for debugging (keep it, but don't show raw error to user)
       console.error("Login failed:", err);
+      */}
 
       toast.error(message);
     } finally {

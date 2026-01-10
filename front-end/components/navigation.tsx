@@ -25,6 +25,7 @@ import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useSocket } from "@/context/SocketContext";
 import { useBusiness } from "@/context/BusinessContext";
+import { toastApiError } from "@/lib/toastApiError";
 
 export default function Navigation() {
   const { unreadCounts } = useSocket();
@@ -65,14 +66,12 @@ const navigationItems = safeIsVerified
   const router = useRouter();
   const logout = async () => {
     try {
-      await axios.get("/api/auth/logout");
+      await axios.post("/api/auth/logout");
       clearBusiness();
-      toast.success("Logged out successfully");
+      toast.success("Logged out successful");
       router.push("/");
-    } catch (error: any) {
-      console.log(error.message);
-
-      toast.error(error.message);
+    } catch (error) {
+      toastApiError(error);
     }
   };
 
