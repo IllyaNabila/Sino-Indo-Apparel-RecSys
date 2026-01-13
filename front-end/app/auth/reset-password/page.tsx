@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import axios from "axios";
 
 export default function ResetPasswordPage() {
   const sp = useSearchParams();
@@ -14,21 +15,52 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  const PASSWORD_RULE =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$/;
+  // explanation:
+  // (?=.*[a-z]) lowercase
+  // (?=.*[A-Z]) uppercase
+  // (?=.*\d) number
+  // (?=.*[^\w\s]) special char
+  // .{8,} length
+
+  const passwordStrong = PASSWORD_RULE.test(password);
+  const passwordError =
+    password.length === 0
+      ? ""
+      : !passwordStrong
+      ? "Use 8+ chars with uppercase, lowercase, number, and symbol."
+      : "";
+
+  const canSubmit = passwordStrong;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setMsg("");
+    setSuccess(false);
 
-    const res = await fetch("/api/auth/reset-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token, password }),
-    });
+    try {
+      const { data } = await axios.post(
+        "/api/auth/reset-password",
+        { token, password },
+        { headers: { "Content-Type": "application/json" } }
+      );
 
-    const data = await res.json().catch(() => ({}));
-    setMsg(data?.message || (res.ok ? "Success." : "Something went wrong."));
-    setLoading(false);
-    setSuccess(true);
+      setMsg(data?.message || "Success.");
+      setSuccess(true);
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Something went wrong.";
+
+      setMsg(message);
+      setSuccess(false);
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (!token) {
@@ -66,16 +98,21 @@ export default function ResetPasswordPage() {
               className="w-full rounded-lg border px-3 py-2"
               type="password"
               value={password}
+              pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}"
+              title="Use 8+ chars with uppercase, lowercase, number, and symbol."
               onChange={(e) => setPassword(e.target.value)}
-              minLength={3}
+              minLength={8}
               required
               placeholder="Min 8 characters"
               disabled={success}
             />
+            {passwordError && (
+              <p className="text-sm text-red-600">{passwordError}</p>
+            )}
 
             <button
               className="w-full rounded-lg bg-emerald-600 text-white py-2 font-medium disabled:opacity-60"
-              disabled={loading || success}
+              disabled={loading || success || !canSubmit}
             >
               {loading ? "Resetting..." : "Reset password"}
             </button>

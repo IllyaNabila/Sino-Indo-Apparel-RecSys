@@ -27,7 +27,7 @@ io.on("connection", (socket) => {
   console.log("Connected:", socket.id);
 
   socket.on("personalChannel", (businessId) => {
-    socket.join(businessId);
+    socket.join(String(businessId));
     console.log(`Socket ${socket.id} joined personal channel: ${businessId}`);
   });
 
@@ -39,7 +39,13 @@ io.on("connection", (socket) => {
   socket.on("sendMessage", (data) => {
     const { selectedChat, msg } = data;
     io.to(selectedChat).emit("receiveMessage", data);
-    io.to(msg.receiverId).emit("newNotification", data);
+    io.to(String(msg.receiverId)).emit("newNotification", data);
+    console.log("newnoti")
+  });
+
+  socket.on("endConversation", (payload) => {
+    const { conversationId } = payload;
+    io.to(conversationId).emit("endConversation", payload);
   });
 
   socket.on("disconnect", () => {

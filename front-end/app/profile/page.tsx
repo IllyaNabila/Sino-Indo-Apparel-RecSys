@@ -1,8 +1,11 @@
 "use client";
 
 import type React from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
+import axios from "axios";
+import { useBusiness } from "@/context/BusinessContext";
 
-import { useEffect, useRef, useState } from "react";
 import {
   Card,
   CardContent,
@@ -23,23 +26,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
+
 import {
   Upload,
-  Building2,
   CheckCircle,
   AlertCircle,
   FileText,
-  Camera,
   Plus,
   X,
   Save,
-  RefreshCw,
 } from "lucide-react";
-import axios from "axios";
-import { useBusiness } from "@/context/BusinessContext";
-import dynamic from "next/dynamic";
 
 // Dynamically import the ProfileButton with SSR turned off
 const ProfileButton = dynamic(() => import("@/components/ProfileButton"), {
@@ -60,10 +57,387 @@ type LicenseStatus = {
   rejectionReason: string;
 };
 
-export default function ProfilePage() {
+type CompanyInfo = {
+  companyName: string;
+  registrationNumber: string;
+  address: string;
+  email: string;
+  phoneNumber: string;
+  website: string;
+  description: string;
+  preferredLanguage: "en" | "id" | "zh" | string;
+};
+
+type InitialPreferences = {
+  materialPreferences: string[];
+  productCategories: Record<string, boolean>;
+  customTags: string[];
+  partnerRegions: string[];
+};
+
+const DEFAULT_CATEGORIES = [
+  "T-Shirts",
+  "Jeans",
+  "Dresses",
+  "Hoodies",
+  "Jackets",
+  "Accessories",
+];
+
+const AVAILABLE_MATERIALS = [
+  "Cotton",
+  "Polyester",
+  "Wool",
+  "Silk",
+  "Linen",
+  "Organic Cotton",
+  "Recycled Polyester",
+  "Bamboo Fiber",
+  "Hemp",
+  "Tencel",
+  "Modal",
+  "Spandex",
+];
+
+const LICENSE_MAX_MB = 10;
+const LICENSE_ALLOWED_MIMES = ["application/pdf", "image/jpeg", "image/png"];
+
+function todayISODate() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function bytesToMB(bytes: number) {
+  return Math.round((bytes / (1024 * 1024)) * 10) / 10;
+}
+
+function arraysEqualIgnoreOrder(a: string[], b: string[]) {
+  const aa = [...a].sort();
+  const bb = [...b].sort();
+  return JSON.stringify(aa) === JSON.stringify(bb);
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.onloadend = () => {
+      const result = reader.result?.toString() || "";
+      const base64 = result.split(",")[1];
+      if (!base64) return reject(new Error("Invalid base64"));
+      resolve(base64);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function StatusBadge({ status }: { status: LicenseStatus["status"] }) {
+  if (status === "approved") {
+    return (
+      <Badge className="bg-emerald-100 text-emerald-800">
+        <CheckCircle className="h-3 w-3 mr-1" />
+        Approved
+      </Badge>
+    );
+  }
+  if (status === "pending") {
+    return (
+      <Badge className="bg-yellow-100 text-yellow-800">
+        <AlertCircle className="h-3 w-3 mr-1" />
+        Under Review
+      </Badge>
+    );
+  }
+  return (
+    <Badge className="bg-red-100 text-red-800">
+      <AlertCircle className="h-3 w-3 mr-1" />
+      Rejected
+    </Badge>
+  );
+}
+
+function HeaderStatusBadge({ status }: { status: LicenseStatus["status"] }) {
+  if (status === "approved") {
+    return (
+      <Badge className="bg-emerald-100 text-emerald-800">
+        <CheckCircle className="h-3 w-3 mr-1" />
+        Verified Business
+      </Badge>
+    );
+  }
+  if (status === "pending") {
+    return (
+      <Badge className="bg-yellow-100 text-yellow-800">
+        <AlertCircle className="h-3 w-3 mr-1" />
+        Verification Pending
+      </Badge>
+    );
+  }
+  return (
+    <Badge className="bg-red-100 text-red-800">
+      <AlertCircle className="h-3 w-3 mr-1" />
+      Verification Required
+    </Badge>
+  );
+}
+
+function LicenseStatusPanel({ licenseStatus }: { licenseStatus: LicenseStatus }) {
+  return (
+    <div className="p-4 rounded-lg border">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold">Verification Status</h3>
+        <StatusBadge status={licenseStatus.status} />
+      </div>
+
+      {licenseStatus.status === "approved" && (
+        <div className="space-y-2">
+          <p className="text-sm text-slate-600">
+            <strong>Submitted:</strong> {licenseStatus.submittedDate}
+          </p>
+          <p className="text-sm text-slate-600">
+            <strong>Approved:</strong> {licenseStatus.approvedDate}
+          </p>
+          <p className="text-sm text-emerald-600">
+            Your business is verified! You can now access all platform features including chat.
+          </p>
+        </div>
+      )}
+
+      {licenseStatus.status === "pending" && (
+        <div className="space-y-2">
+          <p className="text-sm text-slate-600">
+            <strong>Submitted:</strong> {licenseStatus.submittedDate}
+          </p>
+          <p className="text-sm text-yellow-600">
+            Your license is currently under review. We&apos;ll notify you once the review is complete.
+          </p>
+        </div>
+      )}
+
+      {licenseStatus.status === "rejected" && (
+        <div className="space-y-2">
+          <p className="text-sm text-slate-600">
+            <strong>Submitted:</strong> {licenseStatus.submittedDate}
+          </p>
+          <p className="text-sm text-red-600">
+            <strong>Rejection Reason:</strong>{" "}
+            {licenseStatus.rejectionReason ||
+              "Document quality insufficient. Please upload a clearer image of your business license."}
+          </p>
+          <p className="text-sm text-slate-600">
+            Please upload a corrected document to proceed with verification.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LicenseUploader(props: {
+  licenseStatus: LicenseStatus;
+  onSubmitted: () => void;
+}) {
+  const { licenseStatus, onSubmitted } = props;
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const chooseFile = () => fileInputRef.current?.click();
+
+  const clearSelected = useCallback(() => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, [previewUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const sizeMB = bytesToMB(file.size);
+    if (sizeMB > LICENSE_MAX_MB) {
+      alert(`File too large. Max ${LICENSE_MAX_MB}MB.`);
+      e.target.value = "";
+      return;
+    }
+
+    if (!LICENSE_ALLOWED_MIMES.includes(file.type)) {
+      alert("Only PDF, JPG, PNG allowed.");
+      e.target.value = "";
+      return;
+    }
+
+    // create preview
+    const url = URL.createObjectURL(file);
+
+    // clear previous preview (if any)
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+
+    setSelectedFile(file);
+    setPreviewUrl(url);
+
+    // allow selecting the same file again later
+    e.target.value = "";
+  };
+
+  const canSubmit =
+    !!selectedFile &&
+    !submitting &&
+    licenseStatus.status !== "pending" &&
+    licenseStatus.status !== "approved";
+
+  const isPdf = selectedFile?.type === "application/pdf";
+
+  const submit = async () => {
+    if (!selectedFile) return;
+
+    try {
+      setSubmitting(true);
+
+      const base64Data = await fileToBase64(selectedFile);
+
+      await axios.patch("/api/users/license-upload", {
+        filename: selectedFile.name,
+        mimetype: selectedFile.type,
+        data: base64Data,
+      });
+
+      onSubmitted();
+      clearSelected();
+    } catch (err: any) {
+      console.error("Upload failed:", err.response?.data || err.message);
+      // If you have toastApiError, replace console with it:
+      // toastApiError(err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <h3 className="font-semibold">
+        {licenseStatus.status === "rejected"
+          ? "Re-submit Business License"
+          : "Upload Business License"}
+      </h3>
+
+      <div className="border-2 border-dashed border-slate-300 rounded-lg p-8">
+        {!selectedFile ? (
+          <div className="text-center">
+            <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+            <div className="space-y-2">
+              <Button type="button" variant="outline" onClick={chooseFile}>
+                <Upload className="h-4 w-4 mr-2" />
+                Choose File
+              </Button>
+
+              <Input
+                id="license-upload"
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={onSelectFile}
+              />
+
+              <p className="text-sm text-slate-500">
+                Upload your business license (PDF, JPG, PNG up to 10MB)
+              </p>
+
+              {licenseStatus.status === "pending" && (
+                <p className="text-sm text-yellow-700">
+                  Your submission is under review. You can’t submit a new one until it’s approved/rejected.
+                </p>
+              )}
+              {licenseStatus.status === "approved" && (
+                <p className="text-sm text-emerald-700">
+                  Your business is already verified. No further submission needed.
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* File meta + actions */}
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-medium text-slate-900">{selectedFile.name}</p>
+                <p className="text-sm text-slate-500">
+                  {isPdf ? "PDF Document" : "Image"} • {bytesToMB(selectedFile.size)}MB
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={clearSelected}
+                  disabled={submitting}
+                >
+                  Remove
+                </Button>
+
+                <Button type="button" onClick={submit} disabled={!canSubmit}>
+                  {submitting ? "Submitting..." : "Submit for Verification"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Preview */}
+            {previewUrl && (
+              <div className="rounded-lg border bg-white overflow-hidden">
+                {isPdf ? (
+                  <iframe
+                    title="License PDF Preview"
+                    src={previewUrl}
+                    className="w-full h-[520px]"
+                  />
+                ) : (
+                  <img
+                    src={previewUrl}
+                    alt="Business license preview"
+                    className="w-full max-h-[520px] object-contain"
+                  />
+                )}
+              </div>
+            )}
+
+            <p className="text-xs text-slate-500">
+              Tip: If the preview looks blurry, upload a clearer scan/photo before submitting.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-blue-50 p-4 rounded-lg">
+        <h4 className="font-medium text-blue-800 mb-2">Document Requirements:</h4>
+        <ul className="text-sm text-blue-700 space-y-1">
+          <li>• Valid business registration certificate or license</li>
+          <li>• Document must be clearly readable</li>
+          <li>• Company name must match your profile information</li>
+          <li>• Document must be current and not expired</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+export default function ProfilePage() {
   const { businessObject } = useBusiness();
-  const [companyInfo, setCompanyInfo] = useState({
+
+  // -----------------------------
+  // Company info state
+  // -----------------------------
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo>({
     companyName: "",
     registrationNumber: "",
     address: "",
@@ -74,7 +448,7 @@ export default function ProfilePage() {
     preferredLanguage: "en",
   });
 
-  const [initialCompanyInfo, setInitialCompanyInfo] = useState({
+  const [initialCompanyInfo, setInitialCompanyInfo] = useState<CompanyInfo>({
     companyName: "",
     registrationNumber: "",
     address: "",
@@ -84,53 +458,41 @@ export default function ProfilePage() {
     description: "",
     preferredLanguage: "en",
   });
-  const [isCompanyInfoChanged, setIsCompanyInfoChanged] = useState(false);
 
-  // State for tracking preference changes
-  const [isPreferencesChanged, setIsPreferencesChanged] = useState(false);
-  const [initialPreferences, setInitialPreferences] = useState({
-    materialPreferences: [] as string[],
-    productCategories: {} as Record<string, boolean>,
-    customTags: [] as string[],
-    partnerRegions: [] as string[],
-  });
-
+  // -----------------------------
+  // License state
+  // -----------------------------
   const [licenseStatus, setLicenseStatus] = useState<LicenseStatus>({
-    status: "approved", // pending, approved, rejected
+    status: "approved",
     submittedDate: "2024-01-15",
     approvedDate: "2024-01-20",
     rejectionReason: "",
   });
 
+  // -----------------------------
   // Preferences state
-  const [materialPreferences, setMaterialPreferences] = useState([
+  // -----------------------------
+  const [materialPreferences, setMaterialPreferences] = useState<string[]>([
     "Organic Cotton",
     "Recycled Polyester",
     "Bamboo Fiber",
     "Hemp",
   ]);
-  const [seasonPreferences, setSeasonPreferences] = useState([
-    "Spring",
-    "Summer",
-  ]);
-  const [priceRange, setPriceRange] = useState([10, 50]);
-  const [moqRange, setMoqRange] = useState([100, 1000]);
-  const [customTag, setCustomTag] = useState("");
-  const [customTags, setCustomTags] = useState([""]);
-  // "Eco-friendly","Fast delivery","Small batch orders",
-  const [newCategory, setNewCategory] = useState("");
-  const [newRegion, setNewRegion] = useState("");
 
-  const [productCategories, setProductCategories] = useState<
-    Record<string, boolean>
-  >({
-    "T-Shirts": true,
-    Jeans: true,
+  const [productCategories, setProductCategories] = useState<Record<string, boolean>>({
+    "T-Shirts": false,
+    Jeans: false,
     Dresses: false,
-    Hoodies: true,
+    Hoodies: false,
     Jackets: false,
     Accessories: false,
   });
+
+  const [customTag, setCustomTag] = useState("");
+  const [customTags, setCustomTags] = useState<string[]>([]);
+
+  const [newCategory, setNewCategory] = useState("");
+  const [newRegion, setNewRegion] = useState("");
 
   const [partnerPreferences, setPartnerPreferences] = useState<PartnerPreferences>({
     regions: [],
@@ -139,23 +501,66 @@ export default function ProfilePage() {
     responseTime: "Within 24 hours",
   });
 
-  const availableMaterials = [
-    "Cotton",
-    "Polyester",
-    "Wool",
-    "Silk",
-    "Linen",
-    "Organic Cotton",
-    "Recycled Polyester",
-    "Bamboo Fiber",
-    "Hemp",
-    "Tencel",
-    "Modal",
-    "Spandex",
-  ];
+  const [initialPreferences, setInitialPreferences] = useState<InitialPreferences>({
+    materialPreferences: [],
+    productCategories: {},
+    customTags: [],
+    partnerRegions: [],
+  });
 
-  const availableSeasons = ["Spring", "Summer", "Fall", "Winter", "All Season"];
+  const toTitleCase = (s: string) =>
+  s
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 
+  // -----------------------------
+  // Derived "changed" flags
+  // -----------------------------
+  const isCompanyInfoChanged = useMemo(() => {
+    return (
+      companyInfo.companyName !== initialCompanyInfo.companyName ||
+      companyInfo.registrationNumber !== initialCompanyInfo.registrationNumber ||
+      companyInfo.address !== initialCompanyInfo.address ||
+      companyInfo.description !== initialCompanyInfo.description ||
+      companyInfo.preferredLanguage !== initialCompanyInfo.preferredLanguage
+    );
+  }, [companyInfo, initialCompanyInfo]);
+
+  const isPreferencesChanged = useMemo(() => {
+    const materialsChanged = !arraysEqualIgnoreOrder(
+      materialPreferences,
+      initialPreferences.materialPreferences
+    );
+
+    const categoriesChanged =
+      JSON.stringify(productCategories) !==
+      JSON.stringify(initialPreferences.productCategories);
+
+    const tagsChanged = !arraysEqualIgnoreOrder(
+      customTags.filter((t) => t.trim() !== ""),
+      initialPreferences.customTags
+    );
+
+    const regionsChanged = !arraysEqualIgnoreOrder(
+      partnerPreferences.regions,
+      initialPreferences.partnerRegions
+    );
+
+    return materialsChanged || categoriesChanged || tagsChanged || regionsChanged;
+  }, [
+    materialPreferences,
+    productCategories,
+    customTags,
+    partnerPreferences.regions,
+    initialPreferences,
+  ]);
+
+  // -----------------------------
+  // Handlers
+  // -----------------------------
   const handleCompanyInfoUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -170,115 +575,59 @@ export default function ProfilePage() {
       });
 
       console.log("Update success:", response.data);
-      setIsCompanyInfoChanged(false); // Reset after successful save
       setInitialCompanyInfo(companyInfo);
-      // Optionally show success message or toast
     } catch (error: any) {
       console.error("Update failed:", error.response?.data || error.message);
-      // Optionally show error message
     }
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      console.log("Logo uploaded:", file.name);
-    }
-  };
-
-  const handleChooseFileClick = () => {
-    fileInputRef.current?.click();
-  };
-
-    const handleLicenseUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    console.log("File selected:", file.name); // <== ADD THIS
-
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64Data = reader.result?.toString().split(",")[1];
-      if (!base64Data) return;
-
-      try {
-        const res = await axios.patch("/api/users/license-upload", {
-          filename: file.name,
-          mimetype: file.type,
-          data: base64Data,
-        });
-
-        setLicenseStatus((prev) => ({
-          ...prev,
-          status: "pending",
-          submittedDate: new Date().toISOString().split("T")[0],
-          approvedDate: "",
-          rejectionReason: "",
-        }));
-
-        console.log("Upload success:", res.data);
-      } catch (err: any) {
-        console.error("Upload failed:", err.response?.data || err.message);
-      }
-    };
-
-    reader.readAsDataURL(file);
-  };
-
-  // Preference handlers
   const handleAddMaterial = (material: string) => {
-    if (!materialPreferences.includes(material)) {
-      setMaterialPreferences([...materialPreferences, material]);
-    }
+    setMaterialPreferences((prev) =>
+      prev.includes(material) ? prev : [...prev, material]
+    );
   };
 
   const handleRemoveMaterial = (material: string) => {
-    setMaterialPreferences(materialPreferences.filter((m) => m !== material));
-  };
-
-  const handleAddSeason = (season: string) => {
-    if (!seasonPreferences.includes(season)) {
-      setSeasonPreferences([...seasonPreferences, season]);
-    }
-  };
-
-  const handleRemoveSeason = (season: string) => {
-    setSeasonPreferences(seasonPreferences.filter((s) => s !== season));
+    setMaterialPreferences((prev) => prev.filter((m) => m !== material));
   };
 
   const handleAddCustomTag = () => {
-    if (customTag.trim() && !customTags.includes(customTag.trim())) {
-      setCustomTags([...customTags, customTag.trim()]);
-      setCustomTag("");
-    }
+    const trimmed = customTag.trim();
+    if (!trimmed) return;
+    setCustomTags((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
+    setCustomTag("");
   };
 
   const handleRemoveCustomTag = (tag: string) => {
-    setCustomTags(customTags.filter((t) => t !== tag));
+    setCustomTags((prev) => prev.filter((t) => t !== tag));
   };
 
   const handleAddCategory = () => {
     const trimmed = newCategory.trim();
-    if (trimmed && !productCategories.hasOwnProperty(trimmed)) {
-      setProductCategories((prev) => ({ ...prev, [trimmed]: true }));
-      setNewCategory("");
-    }
+    if (!trimmed) return;
+    setProductCategories((prev) =>
+      Object.prototype.hasOwnProperty.call(prev, trimmed)
+        ? prev
+        : { ...prev, [trimmed]: true }
+    );
+    setNewCategory("");
   };
 
   const handleAddRegion = () => {
     const trimmed = newRegion.trim();
-    if (trimmed && !partnerPreferences.regions.includes(trimmed)) {
-      setPartnerPreferences((prev) => ({
-        ...prev,
-        regions: [...prev.regions, trimmed],
-      }));
-      setNewRegion("");
-    }
+    if (!trimmed) return;
+
+    setPartnerPreferences((prev) =>
+      prev.regions.includes(trimmed)
+        ? prev
+        : { ...prev, regions: [...prev.regions, trimmed] }
+    );
+    setNewRegion("");
   };
 
   const handleSavePreferences = async () => {
     const selectedCategories = Object.entries(productCategories)
-      .filter(([_, isChecked]) => isChecked)
+      .filter(([_, isChecked]) => Boolean(isChecked))
       .map(([category]) => category);
 
     const payload = {
@@ -289,169 +638,136 @@ export default function ProfilePage() {
     };
 
     try {
-      const res = await axios.patch("/api/users/survey", {
-        preference: payload,
-      });
-
+      const res = await axios.patch("/api/users/survey", { preference: payload });
       console.log("Preferences saved:", res.data);
-      setIsPreferencesChanged(false)
-      // Optionally: Show toast notification or UI feedback
+
+      // Update initial snapshot to match current values
+      setInitialPreferences({
+        materialPreferences: materialPreferences,
+        productCategories: productCategories,
+        customTags: payload.customTags,
+        partnerRegions: partnerPreferences.regions,
+      });
     } catch (err: any) {
       console.error("Error saving preferences:", err.response?.data || err.message);
-      // Optionally: Show error feedback
     }
   };
 
+  // When license is submitted, update status locally
+  const onLicenseSubmitted = () => {
+    setLicenseStatus((prev) => ({
+      ...prev,
+      status: "pending",
+      submittedDate: todayISODate(),
+      approvedDate: "",
+      rejectionReason: "",
+    }));
+  };
+
+  // -----------------------------
+  // Effects: fetch profile + sync context
+  // -----------------------------
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const res = await axios.get("/api/users/profile");
         const data = res.data;
 
-        setCompanyInfo((prev) => ({
-          ...prev,
-          ...data.companyInfo,
+        // Company info
+        const newCompany: CompanyInfo = {
+          companyName: data.companyInfo?.companyName || "",
+          registrationNumber: data.companyInfo?.registrationNumber || "",
+          address: data.companyInfo?.address || "",
+          email: data.companyInfo?.email || "",
+          phoneNumber: data.companyInfo?.phoneNumber || "",
+          website: data.companyInfo?.website || "",
+          description: data.companyInfo?.description || "",
           preferredLanguage: data.companyInfo?.preferredLanguage || "en",
-        }));
-        setInitialCompanyInfo((prev) => ({
-          ...prev,
-          ...data.companyInfo,
-          preferredLanguage: data.companyInfo?.preferredLanguage || "en",
-        }));
-        setLicenseStatus(data.licenseStatus);
-        // Extract preference data
+        };
+        setCompanyInfo(newCompany);
+        setInitialCompanyInfo(newCompany);
+
+        // License status
+        if (data.licenseStatus) setLicenseStatus(data.licenseStatus);
+
+        // Preferences
         const prefs = data.preference || {};
 
-        // Set material preferences
-        setMaterialPreferences(prefs.materialPreferences || []);
+        const mats: string[] = prefs.materialPreferences || prefs.materials || [];
+        const tags: string[] = prefs.customTags || [];
+        const regions: string[] = prefs.regions || [];
+        const selectedCategories: string[] = prefs.productCategories || [];
 
-        // Set custom tags
-        setCustomTags(prefs.customTags || []);
+        // build categories object from defaults, but allow your existing dynamic additions too
+        const mergedCategoryList = Array.from(
+          new Set([...DEFAULT_CATEGORIES, ...selectedCategories])
+        );
 
-        // Set partner regions
-        setPartnerPreferences((prev) => ({
-          ...prev,
-          regions: prefs.regions || [],
-        }));
-
-        // Convert productCategories array into object
-        const allCategories = [
-          "T-Shirts",
-          "Jeans",
-          "Dresses",
-          "Hoodies",
-          "Jackets",
-          "Accessories",
-        ];
-        const selectedCategories = prefs.productCategories || [];
         const categoryObj: Record<string, boolean> = {};
-
-        allCategories.forEach((cat) => {
-          categoryObj[cat] = selectedCategories.includes(cat);
+        mergedCategoryList.forEach((cat) => {
+          categoryObj[cat] = selectedCategories.includes(cat) || DEFAULT_CATEGORIES.includes(cat)
+            ? selectedCategories.includes(cat)
+            : true;
         });
 
-        setProductCategories(categoryObj);
+        // If API returns empty categories, keep existing state instead of wiping
+        const safeCategoryObj =
+          selectedCategories.length > 0 ? categoryObj : productCategories;
+
+        setMaterialPreferences(mats);
+        setCustomTags(tags);
+        setPartnerPreferences((prev) => ({ ...prev, regions }));
+        setProductCategories(safeCategoryObj);
 
         setInitialPreferences({
-          materialPreferences: prefs.materialPreferences || [],
-          productCategories: categoryObj,
-          customTags: prefs.customTags || [],
-          partnerRegions: prefs.regions || [],
+          materialPreferences: mats,
+          productCategories: safeCategoryObj,
+          customTags: tags,
+          partnerRegions: regions,
         });
       } catch (err: any) {
-        console.error(
-          "Error fetching profile:",
-          err.response?.data?.error || err.message
-        );
+        console.error("Error fetching profile:", err.response?.data?.error || err.message);
       }
     };
 
     fetchProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // This effect syncs the businessObject from context to the local state
   useEffect(() => {
-    if (businessObject) {
-      const info = {
-        companyName: businessObject.companyName || "",
-        registrationNumber: businessObject.registrationNumber || "",
-        address: businessObject.address || "",
-        email: businessObject.email || "",
-        phoneNumber: businessObject.phoneNumber || "",
-        website: businessObject.website || "",
-        description: businessObject.description || "",
-        preferredLanguage: businessObject.preferredLanguage || "en",
-      };
-      setCompanyInfo(info);
-      setInitialCompanyInfo(info);
-    }
+    if (!businessObject) return;
+    const info: CompanyInfo = {
+      companyName: businessObject.companyName || "",
+      registrationNumber: businessObject.registrationNumber || "",
+      address: businessObject.address || "",
+      email: businessObject.email || "",
+      phoneNumber: businessObject.phoneNumber || "",
+      website: businessObject.website || "",
+      description: businessObject.description || "",
+      preferredLanguage: businessObject.preferredLanguage || "en",
+    };
+    setCompanyInfo(info);
+    setInitialCompanyInfo(info);
   }, [businessObject]);
 
-  useEffect(() => {
-    const hasChanged =
-      companyInfo.companyName !== initialCompanyInfo.companyName ||
-      companyInfo.registrationNumber !==
-        initialCompanyInfo.registrationNumber ||
-      companyInfo.address !== initialCompanyInfo.address ||
-      companyInfo.description !== initialCompanyInfo.description ||
-      companyInfo.preferredLanguage !== initialCompanyInfo.preferredLanguage;
-
-    setIsCompanyInfoChanged(hasChanged);
-  }, [companyInfo, initialCompanyInfo]);
-
-  useEffect(() => {
-    const materialsChanged =
-      JSON.stringify(materialPreferences.sort()) !==
-      JSON.stringify(initialPreferences.materialPreferences.sort());
-    const categoriesChanged =
-      JSON.stringify(productCategories) !==
-      JSON.stringify(initialPreferences.productCategories);
-    const tagsChanged =
-      JSON.stringify(customTags.sort()) !==
-      JSON.stringify(initialPreferences.customTags.sort());
-    const regionsChanged =
-      JSON.stringify(partnerPreferences.regions.sort()) !==
-      JSON.stringify(initialPreferences.partnerRegions.sort());
-
-    setIsPreferencesChanged(
-      materialsChanged || categoriesChanged || tagsChanged || regionsChanged
-    );
-  }, [materialPreferences, productCategories, customTags, partnerPreferences.regions, initialPreferences]);
-
-
+  // -----------------------------
+  // UI
+  // -----------------------------
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <header className="bg-white border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">
-              Business Profile
-            </h1>
+            <h1 className="text-2xl font-bold text-slate-800">Business Profile</h1>
             <p className="text-slate-600">
               Manage your company information, verification, and preferences
             </p>
           </div>
+
           <div className="flex items-center space-x-2">
-            {licenseStatus.status === "approved" && (
-              <Badge className="bg-emerald-100 text-emerald-800">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Verified Business
-              </Badge>
-            )}
-            {licenseStatus.status === "pending" && (
-              <Badge className="bg-yellow-100 text-yellow-800">
-                <AlertCircle className="h-3 w-3 mr-1" />
-                Verification Pending
-              </Badge>
-            )}
-            {licenseStatus.status === "rejected" && (
-              <Badge className="bg-red-100 text-red-800">
-                <AlertCircle className="h-3 w-3 mr-1" />
-                Verification Required
-              </Badge>
-            )}
-            <ProfileButton/>
+            <HeaderStatusBadge status={licenseStatus.status} />
+            <ProfileButton />
           </div>
         </div>
       </header>
@@ -464,53 +780,18 @@ export default function ProfilePage() {
             <TabsTrigger value="preferences">Preferences</TabsTrigger>
           </TabsList>
 
+          {/* ---------------- Company ---------------- */}
           <TabsContent value="company" className="space-y-6">
             <div className="grid lg:grid-cols-2 gap-6">
-              {/* Company Logo 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Company Logo</CardTitle>
-                  <CardDescription>Upload your company logo</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-col items-center space-y-4">
-                    <div className="w-32 h-32 bg-slate-100 rounded-lg flex items-center justify-center border-2 border-dashed border-slate-300">
-                      <Building2 className="h-12 w-12 text-slate-400" />
-                    </div>
-                    <div className="text-center">
-                      <Label htmlFor="logo-upload" className="cursor-pointer">
-                        <Button variant="outline" className="w-full">
-                          <Camera className="h-4 w-4 mr-2" />
-                          Upload Logo
-                        </Button>
-                      </Label>
-                      <Input
-                        id="logo-upload"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleLogoUpload}
-                      />
-                      <p className="text-xs text-slate-500 mt-2">PNG, JPG up to 2MB</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>*/}
-
-              {/* Company Information Form */}
               <div className="lg:col-span-2">
                 <Card>
                   <CardHeader>
                     <CardTitle>Company Details</CardTitle>
-                    <CardDescription>
-                      Update your business information
-                    </CardDescription>
+                    <CardDescription>Update your business information</CardDescription>
                   </CardHeader>
+
                   <CardContent>
-                    <form
-                      onSubmit={handleCompanyInfoUpdate}
-                      className="space-y-6"
-                    >
+                    <form onSubmit={handleCompanyInfoUpdate} className="space-y-6">
                       <div className="grid md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="company-name">Company Name</Label>
@@ -518,18 +799,14 @@ export default function ProfilePage() {
                             id="company-name"
                             value={companyInfo.companyName}
                             onChange={(e) =>
-                              setCompanyInfo({
-                                ...companyInfo,
-                                companyName: e.target.value,
-                              })
+                              setCompanyInfo({ ...companyInfo, companyName: e.target.value })
                             }
+                            required
                           />
                         </div>
-                        {/* Registration Number*/}
+
                         <div className="space-y-2">
-                          <Label htmlFor="registration number">
-                            Registration Number
-                          </Label>
+                          <Label htmlFor="registrationNumber">Registration Number</Label>
                           <Textarea
                             id="registrationNumber"
                             value={companyInfo.registrationNumber}
@@ -539,20 +816,16 @@ export default function ProfilePage() {
                                 registrationNumber: e.target.value,
                               })
                             }
+                            required
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="preferredLanguage">
-                            Preferred Language
-                          </Label>
+                          <Label htmlFor="preferredLanguage">Preferred Language</Label>
                           <Select
                             value={companyInfo.preferredLanguage}
                             onValueChange={(value) =>
-                              setCompanyInfo({
-                                ...companyInfo,
-                                preferredLanguage: value,
-                              })
+                              setCompanyInfo({ ...companyInfo, preferredLanguage: value })
                             }
                           >
                             <SelectTrigger id="preferredLanguage">
@@ -560,37 +833,20 @@ export default function ProfilePage() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="en">English</SelectItem>
-                              <SelectItem value="id">
-                                Bahasa Indonesia
-                              </SelectItem>
+                              <SelectItem value="id">Bahasa Indonesia</SelectItem>
                               <SelectItem value="zh">中文</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
-                        {/*
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email Address</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={companyInfo.email}
-                            onChange={(e) => setCompanyInfo({ ...companyInfo, email: e.target.value })}
-                          />
-                        </div>*/}
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="address">Business Address</Label>
-                        <Textarea
+                        <Label htmlFor="address">State/Province</Label>
+                        <Input
                           id="address"
-                          rows={3}
                           value={companyInfo.address}
-                          onChange={(e) =>
-                            setCompanyInfo({
-                              ...companyInfo,
-                              address: e.target.value,
-                            })
-                          }
+                          onChange={(e) => setCompanyInfo({ ...companyInfo, address: e.target.value })}
+                          required
                         />
                       </div>
 
@@ -601,45 +857,12 @@ export default function ProfilePage() {
                           rows={4}
                           value={companyInfo.description}
                           onChange={(e) =>
-                            setCompanyInfo({
-                              ...companyInfo,
-                              description: e.target.value,
-                            })
+                            setCompanyInfo({ ...companyInfo, description: e.target.value })
                           }
                           placeholder="Describe your company, products, and services..."
+                          required
                         />
                       </div>
-
-                      {/**
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">Phone Number</Label>
-                          <Input
-                            id="phone"
-                            value={companyInfo.phoneNumber}
-                            onChange={(e) =>
-                              setCompanyInfo({
-                                ...companyInfo,
-                                phoneNumber: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="website">Website</Label>
-                          <Input
-                            id="website"
-                            value={companyInfo.website}
-                            onChange={(e) =>
-                              setCompanyInfo({
-                                ...companyInfo,
-                                website: e.target.value,
-                              })
-                            }
-                            placeholder="www.yourcompany.com"
-                          />
-                        </div>
-                      </div> */}
 
                       <Button
                         type="submit"
@@ -655,153 +878,34 @@ export default function ProfilePage() {
             </div>
           </TabsContent>
 
+          {/* ---------------- License ---------------- */}
           <TabsContent value="license" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Business License Verification</CardTitle>
                 <CardDescription>
-                  Upload your business license to get verified and unlock chat
-                  functionality
+                  Upload your business license to get verified and unlock chat functionality
                 </CardDescription>
               </CardHeader>
+
               <CardContent className="space-y-6">
-                {/* License Status */}
-                <div className="p-4 rounded-lg border">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold">Verification Status</h3>
-                    {licenseStatus.status === "approved" && (
-                      <Badge className="bg-emerald-100 text-emerald-800">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Approved
-                      </Badge>
-                    )}
-                    {licenseStatus.status === "pending" && (
-                      <Badge className="bg-yellow-100 text-yellow-800">
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        Under Review
-                      </Badge>
-                    )}
-                    {licenseStatus.status === "rejected" && (
-                      <Badge className="bg-red-100 text-red-800">
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        Rejected
-                      </Badge>
-                    )}
-                  </div>
-
-                  {licenseStatus.status === "approved" && (
-                    <div className="space-y-2">
-                      <p className="text-sm text-slate-600">
-                        <strong>Submitted:</strong>{" "}
-                        {licenseStatus.submittedDate}
-                      </p>
-                      <p className="text-sm text-slate-600">
-                        <strong>Approved:</strong> {licenseStatus.approvedDate}
-                      </p>
-                      <p className="text-sm text-emerald-600">
-                        Your business is verified! You can now access all
-                        platform features including chat.
-                      </p>
-                    </div>
-                  )}
-
-                  {licenseStatus.status === "pending" && (
-                    <div className="space-y-2">
-                      <p className="text-sm text-slate-600">
-                        <strong>Submitted:</strong>{" "}
-                        {licenseStatus.submittedDate}
-                      </p>
-                      <p className="text-sm text-yellow-600">
-                        Your license is currently under review. We'll notify you
-                        once the review is complete.
-                      </p>
-                    </div>
-                  )}
-
-                  {licenseStatus.status === "rejected" && (
-                    <div className="space-y-2">
-                      <p className="text-sm text-slate-600">
-                        <strong>Submitted:</strong>{" "}
-                        {licenseStatus.submittedDate}
-                      </p>
-                      <p className="text-sm text-red-600">
-                        <strong>Rejection Reason:</strong>{" "}
-                        {licenseStatus.rejectionReason ||
-                          "Document quality insufficient. Please upload a clearer image of your business license."}
-                      </p>
-                      <p className="text-sm text-slate-600">
-                        Please upload a corrected document to proceed with
-                        verification.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* License Upload */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold">
-                    {licenseStatus.status === "rejected"
-                      ? "Re-submit Business License"
-                      : "Upload Business License"}
-                  </h3>
-
-                  <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center">
-                    <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="license-upload"
-                        className="cursor-pointer"
-                      >
-                        <Button variant="outline" onClick={handleChooseFileClick}>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Choose File
-                        </Button>
-                      </Label>
-                      <Input
-                        id="license-upload"
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        ref={fileInputRef}
-                        className="hidden"
-                        onChange={handleLicenseUpload}
-                      />
-                      <p className="text-sm text-slate-500">
-                        Upload your business license (PDF, JPG, PNG up to 10MB)
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-blue-800 mb-2">
-                      Document Requirements:
-                    </h4>
-                    {/**<ul className="text-sm text-blue-700 space-y-1">
-                      <li>• Valid business registration certificate or license</li>
-                      <li>• Document must be clearly readable</li>
-                      <li>• Company name must match your profile information</li>
-                      <li>• Document must be current and not expired</li>
-                    </ul>*/}
-                  </div>
-                </div>
+                <LicenseStatusPanel licenseStatus={licenseStatus} />
+                <LicenseUploader licenseStatus={licenseStatus} onSubmitted={onLicenseSubmitted} />
               </CardContent>
             </Card>
           </TabsContent>
 
+          {/* ---------------- Preferences ---------------- */}
           <TabsContent value="preferences" className="space-y-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-xl font-bold text-slate-800">
-                  Business Preferences
-                </h2>
+                <h2 className="text-xl font-bold text-slate-800">Business Preferences</h2>
                 <p className="text-slate-600">
                   Customize your experience and improve recommendations
                 </p>
               </div>
+
               <div className="flex items-center space-x-2">
-                {/**<Button variant="outline">
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Reset to Defaults
-                </Button>*/}
                 <Button
                   onClick={handleSavePreferences}
                   disabled={!isPreferencesChanged}
@@ -810,17 +914,16 @@ export default function ProfilePage() {
                   <Save className="h-4 w-4 mr-2" />
                   Save Preferences
                 </Button>
-              </div> 
+              </div>
             </div>
 
             {/* Material Preferences */}
             <Card>
               <CardHeader>
                 <CardTitle>Material Preferences</CardTitle>
-                <CardDescription>
-                  Select materials you prefer to work with
-                </CardDescription>
+                <CardDescription>Select materials you prefer to work with</CardDescription>
               </CardHeader>
+
               <CardContent className="space-y-4">
                 <div className="flex flex-wrap gap-2">
                   {materialPreferences.map((material) => (
@@ -831,6 +934,7 @@ export default function ProfilePage() {
                     >
                       {material}
                       <button
+                        type="button"
                         onClick={() => handleRemoveMaterial(material)}
                         className="ml-2 hover:bg-emerald-800 rounded-full p-0.5"
                       >
@@ -839,6 +943,7 @@ export default function ProfilePage() {
                     </Badge>
                   ))}
                 </div>
+
                 <div>
                   <Label>Add Material</Label>
                   <Select onValueChange={handleAddMaterial}>
@@ -846,149 +951,47 @@ export default function ProfilePage() {
                       <SelectValue placeholder="Select a material to add" />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableMaterials
-                        .filter(
-                          (material) => !materialPreferences.includes(material)
-                        )
-                        .map((material) => (
+                      {AVAILABLE_MATERIALS.filter((m) => !materialPreferences.includes(m)).map(
+                        (material) => (
                           <SelectItem key={material} value={material}>
                             {material}
                           </SelectItem>
-                        ))}
+                        )
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Season Preferences 
-            <Card>
-              <CardHeader>
-                <CardTitle>Season Preferences</CardTitle>
-                <CardDescription>Select seasons you typically focus on</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  {seasonPreferences.map((season) => (
-                    <Badge key={season} variant="default" className="bg-blue-600 hover:bg-blue-700">
-                      {season}
-                      <button
-                        onClick={() => handleRemoveSeason(season)}
-                        className="ml-2 hover:bg-blue-800 rounded-full p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-                <div>
-                  <Label>Add Season</Label>
-                  <Select onValueChange={handleAddSeason}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a season to add" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableSeasons
-                        .filter((season) => !seasonPreferences.includes(season))
-                        .map((season) => (
-                          <SelectItem key={season} value={season}>
-                            {season}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>*/}
-
-            {/* Price and MOQ Ranges 
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Target Price Range</CardTitle>
-                  <CardDescription>Set your preferred price range per piece (USD)</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="px-2">
-                    <Slider
-                      value={priceRange}
-                      onValueChange={setPriceRange}
-                      max={100}
-                      min={1}
-                      step={1}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="flex justify-between text-sm text-slate-600">
-                    <span>${priceRange[0]}</span>
-                    <span>${priceRange[1]}</span>
-                  </div>
-                  <p className="text-sm text-slate-500">
-                    Current range: ${priceRange[0]} - ${priceRange[1]} per piece
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>MOQ Range</CardTitle>
-                  <CardDescription>Set your preferred minimum order quantity range</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="px-2">
-                    <Slider
-                      value={moqRange}
-                      onValueChange={setMoqRange}
-                      max={5000}
-                      min={50}
-                      step={50}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="flex justify-between text-sm text-slate-600">
-                    <span>{moqRange[0]} pcs</span>
-                    <span>{moqRange[1]} pcs</span>
-                  </div>
-                  <p className="text-sm text-slate-500">
-                    Current range: {moqRange[0]} - {moqRange[1]} pieces
-                  </p>
-                </CardContent>
-              </Card>
-            </div>*/}
-
             {/* Product Categories */}
             <Card>
               <CardHeader>
                 <CardTitle>Product Categories</CardTitle>
-                <CardDescription>
-                  Select product categories you're interested in
-                </CardDescription>
+                <CardDescription>Select product categories you&apos;re interested in</CardDescription>
               </CardHeader>
+
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {Object.entries(productCategories).map(
-                    ([category, checked]) => (
-                      <div
-                        key={category}
-                        className="flex items-center space-x-2"
-                      >
-                        <Checkbox
-                          id={category}
-                          checked={checked}
-                          onCheckedChange={(isChecked) =>
-                            setProductCategories({
-                              ...productCategories,
-                              [category]: isChecked as boolean,
-                            })
-                          }
-                        />
-                        <Label htmlFor={category} className="cursor-pointer">
-                          {category}
-                        </Label>
-                      </div>
-                    )
-                  )}
+                  {Object.entries(productCategories).map(([category, checked]) => (
+                    <div key={category} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={category}
+                        checked={checked}
+                        onCheckedChange={(isChecked) =>
+                          setProductCategories((prev) => ({
+                            ...prev,
+                            [category]: Boolean(isChecked),
+                          }))
+                        }
+                      />
+                      <Label htmlFor={category} className="cursor-pointer">
+                        {category}
+                      </Label>
+                    </div>
+                  ))}
                 </div>
+
                 <div className="mt-4 flex space-x-2">
                   <Input
                     placeholder="Add new category"
@@ -996,7 +999,7 @@ export default function ProfilePage() {
                     onChange={(e) => setNewCategory(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
                   />
-                  <Button onClick={handleAddCategory} variant="outline">
+                  <Button type="button" onClick={handleAddCategory} variant="outline">
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -1011,6 +1014,7 @@ export default function ProfilePage() {
                   Add custom tags to help us understand your specific needs
                 </CardDescription>
               </CardHeader>
+
               <CardContent className="space-y-4">
                 <div className="flex flex-wrap gap-2">
                   {customTags.map((tag) => (
@@ -1019,8 +1023,9 @@ export default function ProfilePage() {
                       variant="outline"
                       className="border-purple-200 text-purple-700"
                     >
-                      {tag}
+                      {toTitleCase(tag)}
                       <button
+                        type="button"
                         onClick={() => handleRemoveCustomTag(tag)}
                         className="ml-2 hover:bg-purple-100 rounded-full p-0.5"
                       >
@@ -1029,127 +1034,65 @@ export default function ProfilePage() {
                     </Badge>
                   ))}
                 </div>
+
                 <div className="flex space-x-2">
                   <Input
                     placeholder="Enter custom tag..."
                     value={customTag}
                     onChange={(e) => setCustomTag(e.target.value)}
-                    onKeyPress={(e) =>
-                      e.key === "Enter" && handleAddCustomTag()
-                    }
+                    onKeyDown={(e) => e.key === "Enter" && handleAddCustomTag()}
                   />
-                  <Button onClick={handleAddCustomTag} variant="outline">
+                  <Button type="button" onClick={handleAddCustomTag} variant="outline">
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Partner Preferences */}
+            {/* Partner Preferences (regions) */}
             <Card>
               <CardHeader>
                 <CardTitle>Partner Preferences</CardTitle>
                 <CardDescription>
-                  Set preferences for the types of partners you want to connect
-                  with
+                  Set preferences for the types of partners you want to connect with
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid md:grid-cols-1 gap-6">
-                  <div className="space-y-2">
-                    <Label>Preferred Regions</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {partnerPreferences.regions.map((region) => (
-                        <Badge
-                          key={region}
-                          variant="secondary"
-                          className="flex items-center gap-1"
-                        >
-                          {region}
-                          <button
-                            onClick={() =>
-                              setPartnerPreferences((prev) => ({
-                                ...prev,
-                                regions: prev.regions.filter((r) => r !== region),
-                              }))
-                            }
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                    <div className="mt-4 flex space-x-2">
-                      <Input
-                        placeholder="Add new region"
-                        value={newRegion}
-                        onChange={(e) => setNewRegion(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleAddRegion()}
-                      />
-                      <Button onClick={handleAddRegion} variant="outline">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
 
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label>Preferred Regions</Label>
+
+                  <div className="flex flex-wrap gap-2">
+                    {partnerPreferences.regions.map((region) => (
+                      <Badge key={region} variant="secondary" className="flex items-center gap-1">
+                        {toTitleCase(region)}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPartnerPreferences((prev) => ({
+                              ...prev,
+                              regions: prev.regions.filter((r) => r !== region),
+                            }))
+                          }
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
                   </div>
-                  {/**<div className="space-y-2">
-                    <Label>Business Size Preference</Label>
-                    <Select
-                      value={partnerPreferences.businessSize}
-                      onValueChange={(value) =>
-                        setPartnerPreferences({
-                          ...partnerPreferences,
-                          businessSize: value,
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Small">
-                          Small (1-50 employees)
-                        </SelectItem>
-                        <SelectItem value="Medium">
-                          Medium (51-200 employees)
-                        </SelectItem>
-                        <SelectItem value="Large">
-                          Large (200+ employees)
-                        </SelectItem>
-                        <SelectItem value="Any">Any Size</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>*/}
+
+                  <div className="mt-4 flex space-x-2">
+                    <Input
+                      placeholder="Add new region"
+                      value={newRegion}
+                      onChange={(e) => setNewRegion(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddRegion()}
+                    />
+                    <Button type="button" onClick={handleAddRegion} variant="outline">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                {/**<div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>Required Certifications</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {partnerPreferences.certifications.map((cert) => (
-                        <Badge key={cert} variant="secondary">
-                          {cert}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Expected Response Time</Label>
-                    <Select
-                      value={partnerPreferences.responseTime}
-                      onValueChange={(value) => setPartnerPreferences({ ...partnerPreferences, responseTime: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Within 1 hour">Within 1 hour</SelectItem>
-                        <SelectItem value="Within 24 hours">Within 24 hours</SelectItem>
-                        <SelectItem value="Within 3 days">Within 3 days</SelectItem>
-                        <SelectItem value="Within 1 week">Within 1 week</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>*/}
               </CardContent>
             </Card>
           </TabsContent>

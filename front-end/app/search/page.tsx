@@ -91,21 +91,95 @@ interface FilterSuggestion {
   value: string;
 }
 
-export default function SearchPage() {
-  const { businessId, businessObject } = useBusiness();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      type: "assistant",
+function buildIntro(role?: string, country?: string) {
+  const isImporter = role === "importer";
+  const isManufacturer = role === "manufacturer";
+
+  // Fallback if role not ready yet
+  if (!isImporter && !isManufacturer) {
+    return {
       content:
-        '👋 Hi! I\'m your AI search assistant. I can help you find products, suppliers, or business partners. Just tell me what you\'re looking for in natural language!\n\nFor example, you could say:\n• "I need organic cotton t-shirts from China under $15"\n• "Find me sustainable fabric suppliers in China"\n• "Show me denim manufacturers with fast delivery"',
-      timestamp: new Date(),
+        "👋 Hi! I'm your AI search assistant. Tell me what you're looking for in natural language!",
       suggestions: [
         "Find organic cotton suppliers",
         "Show me sustainable manufacturers",
         "I need denim products under $20",
         "Find partners in Indonesia",
       ],
+    };
+  }
+
+  if (isImporter) {
+    const from = country === "indonesia" ? "China" : "Indonesia";
+    return {
+      content:
+        `👋 Hi! I'm your AI search assistant for importers.\n` +
+        `Tell me what products you want to source (material, category, price, MOQ).\n\n` +
+        `For example, you could say:\n` +
+        `• "I need organic cotton t-shirts from ${from} under $15"\n` +
+        `• "Find halal/modest wear suppliers with MOQ 200"\n` +
+        `• "Show me denim manufacturers with fast production"\n`,
+      suggestions: [
+        "Find organic cotton t-shirts under $15",
+        "MOQ 200 modest wear suppliers",
+        "Denim jeans manufacturers fast production",
+        "Sustainable fabric suppliers",
+      ],
+    };
+  }
+
+  // Manufacturer
+  const target = country === "china" ? "Indonesia" : "China";
+  return {
+    content:
+      `👋 Hi! I'm your AI search assistant for manufacturers.\n` +
+      `Tell me what kind of buyers/requests you want to match (category, materials, target market).\n\n` +
+      `For example, you could say:\n` +
+      `• "Find importers in ${target} looking for modest wear"\n` +
+      `• "Show buyer requests for cotton t-shirts, MOQ 300+"\n` +
+      `• "Find partners needing denim products under $20"\n`,
+    suggestions: [
+      `Importers in ${target} for modest wear`,
+      "Buyer requests: cotton t-shirts MOQ 300+",
+      "Denim buyers under $20",
+      "Sustainable materials requests",
+    ],
+  };
+}
+
+function buildSearchPlaceholder(role?: string, country?: string) {
+  if (role === "importer") {
+    const from = country === "indonesia" ? "China" : "Indonesia";
+    return `Ask me anything... e.g., "Find organic cotton t-shirts from ${from} under $15 (MOQ 200)"`;
+  }
+
+  if (role === "manufacturer") {
+    const target = country === "china" ? "Indonesia" : "China";
+    return `Ask me anything... e.g., "Find importers in ${target} requesting denim under $20 (MOQ 300+)"`;
+  }
+
+  return `Ask me anything... e.g., "Find organic cotton requested in Indonesia under $15"`;
+}
+
+
+export default function SearchPage() {
+  const { businessId, businessObject } = useBusiness();
+
+  const intro = buildIntro(businessObject?.role, businessObject?.country);
+
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "1",
+      type: "assistant",
+      content: intro.content,
+      timestamp: new Date(),
+      suggestions: intro.suggestions,
     },
   ]);
   const { socket } = useSocket();
@@ -1206,7 +1280,7 @@ const processNLPQuery = async (query: string): Promise<Message> => {
         <div className="flex-1 flex flex-col">
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {messages.map((message) => (
+            {mounted && messages.map((message) => (
               <div
                 key={message.id}
                 className={`flex ${
@@ -1351,13 +1425,13 @@ const processNLPQuery = async (query: string): Promise<Message> => {
 
           {/* Input Area */}
           <div className="border-t bg-white p-4">
-            <div className="flex space-x-2">
+            {mounted && <div className="flex space-x-2">
               <div className="flex-1">
                 <Input
-                  placeholder="Ask me anything... e.g., 'Find organic cotton requested in Indonesia under $15'"
+                  placeholder={buildSearchPlaceholder(businessObject?.role, businessObject?.country)}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyPress}
                   className="w-full"
                 />
               </div>
@@ -1369,6 +1443,7 @@ const processNLPQuery = async (query: string): Promise<Message> => {
                 <Send className="h-4 w-4" />
               </Button>
             </div>
+            }
           </div>
         </div>
 

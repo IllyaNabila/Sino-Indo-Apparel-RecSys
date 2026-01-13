@@ -38,11 +38,67 @@ export default function LicenseUploadPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadComplete, setUploadComplete] = useState(false);
+  const [fileError, setFileError] = useState("");
+
+  // bytes -> nice text (e.g., 2.4 MB)
+  const formatBytes = (bytes: number) => {
+    const units = ["B", "KB", "MB", "GB"];
+    let i = 0;
+    let n = bytes;
+    while (n >= 1024 && i < units.length - 1) {
+      n = n / 1024;
+      i++;
+    }
+    return `${n.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+  };
+
+  const MAX_SIZE_MB = 10;
+  const MAX_BYTES = MAX_SIZE_MB * 1024 * 1024;
+
+  // Prefer MIME allowlist (most reliable)
+  const ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/png"];
+
+  // Optional: extension check as backup (because MIME can be weird sometimes)
+  const ALLOWED_EXT = ["pdf", "jpg", "jpeg", "png"];
+
+  const validateFile = (file: File) => {
+    // 1) Size
+    if (file.size > MAX_BYTES) {
+      console.log("file too large")
+      return `File too large. Max ${MAX_SIZE_MB}MB. Your file is ${formatBytes(file.size)}.`;
+    }
+
+    // 2) MIME type
+    const mimeOk = ALLOWED_MIME.includes(file.type);
+
+    // 3) Extension backup check
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    const extOk = ALLOWED_EXT.includes(ext);
+
+    if (!mimeOk && !extOk) {
+      return "Invalid file type. Only PDF, JPG, or PNG allowed.";
+    }
+
+    return null; // valid
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+
+    const err = validateFile(selected);
+    if (err) {
+      setFile(null);
+      setFileError(err);
+      e.target.value = ""; // reset input so they can re-pick same file
+      return;
     }
+
+    setFileError("");
+    setFile(selected);
+
+    // Optional: show info in UI
+    console.log("Selected:", selected.name, selected.type, formatBytes(selected.size));
   };
 
   const convertToBase64 = (file: File): Promise<string> => {
@@ -63,6 +119,12 @@ export default function LicenseUploadPage() {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) return;
+
+    const err = validateFile(file);
+    if (err) {
+      setFileError(err);
+      return;
+    }
 
     setUploading(true);
     setUploadProgress(0);
@@ -103,6 +165,7 @@ export default function LicenseUploadPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
+        {/**
         <div className="mb-6">
           <Link
             href={`/auth/business-details`}
@@ -111,7 +174,7 @@ export default function LicenseUploadPage() {
             <ArrowLeft className="h-4 w-4" />
             <span>Back to business details</span>
           </Link>
-        </div>
+        </div> */}
 
         <Card>
           <div className="mb-8">
@@ -204,6 +267,7 @@ export default function LicenseUploadPage() {
                   </Button>
                 </div>
               )}
+              {!!fileError && <p className="text-red-500">{fileError}</p>}
 
               {uploading && (
                 <div className="space-y-2">

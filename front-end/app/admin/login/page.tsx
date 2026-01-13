@@ -68,7 +68,7 @@ export default function AdminLoginPage() {
                   placeholder="admin@apparelbiz.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
+                  required 
                 />
               </div>
 

@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 import "@/models/businessModel";
 import "@/models/licenseModel";
 import "@/models/conversationMembershipModel";
@@ -6,26 +6,40 @@ import "@/models/conversationModel";
 import "@/models/messageModel";
 import "@/models/userModel";
 import "@/models/preferenceModel";
-import "@/models/productModel"; //force-load model definitions early so model exist before queries
+import "@/models/productModel";
+
+const MONGO_URI = process.env.MONGO_URI as string;
+
+if (!MONGO_URI) {
+  throw new Error("MONGO_URI is missing in environment variables");
+}
+
+// Cache across hot reloads in dev
+let cached = (global as any).mongoose;
+if (!cached) {
+  cached = (global as any).mongoose = { conn: null as any, promise: null as any };
+}
 
 export async function connect() {
-    if (mongoose.connection.readyState >= 1) // check prevent multiple reconnections in nextjs hot reload
-        return;
+  // already connected
+  if (cached.conn) return cached.conn;
 
-    try {
-        await mongoose.connect(process.env.MONGO_URI!)
-        const connection = mongoose.connection;
+  // start connecting only once
+  if (!cached.promise) {
+    cached.promise = mongoose
+      .connect(MONGO_URI)
+      .then((m) => m);
 
-        connection.on('connected', () => {
-            console.log('MongoDB connected successfully');            
-        })
+    // attach listeners once
+    mongoose.connection.once("connected", () => {
+      console.log("MongoDB connected successfully");
+    });
 
-        connection.on('error', (err) => {
-            console.log('MongoDB connection error. Please make sure MongoDB is running,' + err);
-            process.exit();            
-        })
-    } catch (error) {
-        console.log("Something goes wrong!");
-        console.log(error);     
-    }
+    mongoose.connection.once("error", (err) => {
+      console.error("MongoDB connection error:", err);
+    });
+  }
+
+  cached.conn = await cached.promise;
+  return cached.conn;
 }

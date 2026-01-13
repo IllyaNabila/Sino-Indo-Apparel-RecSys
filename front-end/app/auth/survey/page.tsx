@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -147,14 +147,19 @@ export default function SurveyPage() {
     primaryMarkets: [],
     productCategories: [],
     materials: [],
-    priceRange: [10, 50],
-    volumeRange: [500, 5000],
+    priceRange: [],
+    volumeRange: [],
     customPreferences: [],
     seasonPreferences: [],
   });
+  const [mounted, setMounted] = useState(false);
 
   const totalSteps = 3;
   const progress = (currentStep / totalSteps) * 100;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const toCheckboxId = (prefix: string, value: string) =>
     `${prefix}-${value
@@ -226,62 +231,55 @@ export default function SurveyPage() {
           <Label className="text-base font-medium mb-2">
             Primary Markets (Select all that apply)
           </Label>
-          {businessObject.country === "indonesia" ? (
-            <>
-              {/* China Region */}
-              <div className="mt-4">
-                <Label className="text-sm font-semibold text-gray-700">China</Label>
-                <div className="grid grid-cols-2 gap-3 mt-2">
-                  {CHINA_PRIMARY_MARKETS.map((market) => {
-                    const id = toCheckboxId("primaryMarket", market.value);
-                    return (
-                      <div key={market.value} className="flex items-center space-x-2">
+          {!mounted ? <p className="text-sm text-gray-500">Loading…</p> : businessObject?.country === "indonesia" ? (
+            <div className="mt-4">
+              <Label className="text-sm font-semibold text-gray-700">China</Label>
+
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                {CHINA_PRIMARY_MARKETS.map((market) => {
+                  const id = toCheckboxId("primaryMarket", market.value);
+                  const selected = (surveyData?.primaryMarkets ?? []).includes(market.value);
+
+                  return (
+                    <div key={market.value} className="flex items-center space-x-2">
                       <Checkbox
                         id={id}
-                        checked={surveyData.primaryMarkets.includes(market.value)}
-                        onCheckedChange={() =>
-                          handleArrayToggle("primaryMarkets", market.value)
-                        }
+                        checked={selected}
+                        onCheckedChange={() => handleArrayToggle("primaryMarkets", market.value)}
                       />
                       <Label htmlFor={id} className="text-sm">
                         {market.label}
                       </Label>
                     </div>
-                    );
-                  })}
-                </div>
+                  );
+                })}
               </div>
-            </>
-          ) : businessObject.country === "china" ? (
-            <>
-              {/* Indonesia Region */}
-              <div className="mt-6">
-                <Label className="text-sm font-semibold text-gray-700">
-                  Indonesia
-                </Label>
-                <div className="grid grid-cols-2 gap-3 mt-2">
-                  {INDONESIA_PRIMARY_MARKETS.map((market) => {
-                    const id = toCheckboxId("primaryMarket", market.value);
-                    return (
-                      <div key={market.value} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={id}
-                          checked={surveyData.primaryMarkets.includes(market.value)}
-                          onCheckedChange={() =>
-                            handleArrayToggle("primaryMarkets", market.value)
-                          }
-                        />
-                        <Label htmlFor={id} className="text-sm">
-                          {market.label}
-                        </Label>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          ) : null } 
+            </div>
+          ) : businessObject?.country === "china" ? (
+            <div className="mt-6">
+              <Label className="text-sm font-semibold text-gray-700">Indonesia</Label>
 
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                {INDONESIA_PRIMARY_MARKETS.map((market) => {
+                  const id = toCheckboxId("primaryMarket", market.value);
+                  const selected = (surveyData?.primaryMarkets ?? []).includes(market.value);
+
+                  return (
+                    <div key={market.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={id}
+                        checked={selected}
+                        onCheckedChange={() => handleArrayToggle("primaryMarkets", market.value)}
+                      />
+                      <Label htmlFor={id} className="text-sm">
+                        {market.label}
+                      </Label>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
@@ -420,6 +418,7 @@ export default function SurveyPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
+        {/**
         <div className="mb-6">
           <Link
             href={`/auth/license-upload`}
@@ -428,7 +427,7 @@ export default function SurveyPage() {
             <ArrowLeft className="h-4 w-4" />
             <span>Back to license upload</span>
           </Link>
-        </div>
+        </div> */}
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center pb-6">
             <CardDescription>
@@ -510,7 +509,7 @@ export default function SurveyPage() {
             <div className="text-center mt-4">
               <Button
                 variant="ghost"
-                onClick={() => router.push("/dashboard")}
+                onClick={handleSubmit}
                 className="text-slate-500 hover:text-slate-700"
               >
                 Skip for now (you can complete this later)

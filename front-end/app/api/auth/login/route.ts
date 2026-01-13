@@ -10,16 +10,18 @@ import {
   BadRequestError,
   ForbiddenError,
   InvalidJsonError,
+  NotFoundError,
   UnauthorizedError,
 } from "@/lib/errors";
 import { withErrorHandler } from "@/lib/withErrorHandler";
+import BusinessLicense from "@/models/licenseModel";
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
   await connect();
 
   const reqBody = await request.json().catch((e) => {
     throw new InvalidJsonError(e);
-  });
+  }); 
 
   const email = String(reqBody.email ?? "").trim().toLowerCase();
   const password = String(reqBody.password ?? "");
@@ -44,8 +46,20 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   const business = await Business.findOne({ submittedBy: user._id });
 
-  const tokenData: any = { id: user._id, email: user.email };
-  if (business?._id) tokenData.businessId = business._id;
+  const tokenData = {
+    id: String(user._id),
+    email: user.email,
+
+    // defaults (important)
+    businessId: business?._id ? String(business._id) : "",
+    verified: business?.verified === true,
+    licenseUploaded: false,
+  };
+
+  if (business) {
+    const license = await BusinessLicense.findOne({ businessId: business._id });
+    tokenData.licenseUploaded = !!license; // true if found
+  }
 
   const secret = process.env.TOKEN_SECRET;
   if (!secret) {

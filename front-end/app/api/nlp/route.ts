@@ -1,20 +1,28 @@
-
 // /app/api/nlp/route.ts
-
 import { NextResponse } from "next/server";
 import { cleanQuery, classifyIntent, extractEntities } from "@/lib/nlp";
 
-// --- 4. API Route ---
 export async function POST(req: Request) {
-  const { query } = await req.json();
+  try {
+    const body = await req.json().catch(() => ({}));
+    const query = typeof body?.query === "string" ? body.query : "";
 
-  const cleaned = cleanQuery(query);
-  const intent = classifyIntent(cleaned);
-  const entities = extractEntities(cleaned);
+    if (!query.trim()) {
+      return NextResponse.json(
+        { error: "Missing or empty query." },
+        { status: 400 }
+      );
+    }
 
-  return NextResponse.json({
-    cleaned,
-    intent,
-    ...entities,
-  });
+    const cleaned = cleanQuery(query);
+    const intent = classifyIntent(cleaned);
+    const entities = extractEntities(cleaned, query);
+
+    return NextResponse.json({ cleaned, intent, ...entities });
+  } catch (e) {
+    return NextResponse.json(
+      { error: "Failed to process NLP request." },
+      { status: 500 }
+    );
+  }
 }

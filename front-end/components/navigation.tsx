@@ -45,21 +45,14 @@ const safeUnreadBadge = mounted
 
 const safeIsVerified = mounted ? !!businessObject?.verified : false;
 
-const navigationItems = safeIsVerified
-  ? [
-      { name: "Search", href: "/search", icon: Search },
-      { name: "Dashboard", href: "/dashboard", icon: Home },
-      { name: "Products", href: "/products", icon: Package },
-      { name: "Messages", href: "/chat", icon: MessageSquare, badge: safeUnreadBadge },
-      //{ name: "Feedback", href: "/feedback", icon: MessageSquare },
-    ]
-  : [
-      { name: "Search", href: "/search", icon: Search },
-      { name: "Dashboard", href: "/dashboard", icon: Home },
-      { name: "Products", href: "/products", icon: Package },
-      //{ name: "Feedback", href: "/feedback", icon: MessageSquare },
-    ];
+const navigationItems = [
+  { name: "Search", href: "/search", icon: Search, requiresVerified: false },
+  { name: "Dashboard", href: "/dashboard", icon: Home, requiresVerified: false },
+  { name: "Products", href: "/products", icon: Package, requiresVerified: true },
 
+  // ✅ Lock this when unverified
+  { name: "Messages", href: "/chat", icon: MessageSquare, badge: safeUnreadBadge, requiresVerified: true },
+];
 
   const isActive = (href: string) => pathname === href;
 
@@ -68,8 +61,8 @@ const navigationItems = safeIsVerified
     try {
       await axios.post("/api/auth/logout");
       clearBusiness();
-      toast.success("Logged out successful");
       router.push("/");
+      toast.success("Logged out successful");
     } catch (error) {
       toastApiError(error);
     }
@@ -125,31 +118,63 @@ const navigationItems = safeIsVerified
 
           {/* Navigation */}
           <nav className="mt-6 flex-1 px-2 space-y-1">
-            {navigationItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
-                  isActive(item.href)
-                    ? "bg-blue-100 text-blue-700"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                }`}
-              >
-                <item.icon
-                  className={`mr-3 h-5 w-5 ${
-                    isActive(item.href)
-                      ? "text-blue-700"
-                      : "text-slate-400 group-hover:text-slate-500"
-                  }`}
-                />
-                {item.name}
-                {mounted && item.badge ? (
-                  <Badge className="ml-auto bg-blue-500 text-white">{item.badge}</Badge>
-                ) : null}
+            {navigationItems.map((item) => {
+              const disabled = !safeIsVerified && item.requiresVerified;
 
-              </Link>
-            ))}
+              const baseClass =
+                "group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors";
+
+              const enabledClass = isActive(item.href)
+                ? "bg-blue-100 text-blue-700"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900";
+
+              const disabledClass =
+                "text-slate-400 cursor-not-allowed opacity-60 bg-slate-50";
+
+              const iconClass = disabled
+                ? "text-slate-300"
+                : isActive(item.href)
+                  ? "text-blue-700"
+                  : "text-slate-400 group-hover:text-slate-500";
+
+              const content = (
+                <>
+                  <item.icon className={`mr-3 h-5 w-5 ${iconClass}`} />
+                  {item.name}
+
+                  {/* Show badge only when enabled */}
+                  {mounted && item.badge && !disabled ? (
+                    <Badge className="ml-auto bg-blue-500 text-white">{item.badge}</Badge>
+                  ) : null}
+
+                  {/* Optional "Locked" badge */}
+                  {disabled ? (
+                    <Badge className="ml-auto bg-slate-200 text-slate-600">Locked</Badge>
+                  ) : null}
+                </>
+              );
+
+              return disabled ? (
+                <span
+                  key={item.name}
+                  className={`${baseClass} ${disabledClass}`}
+                  aria-disabled="true"
+                  title="Verify your business to access this feature"
+                >
+                  {content}
+                </span>
+              ) : (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`${baseClass} ${enabledClass}`}
+                >
+                  {content}
+                </Link>
+              );
+            })}
           </nav>
+
 
           {/* Bottom Actions */}
           <div className="flex-shrink-0 px-2 space-y-1">
