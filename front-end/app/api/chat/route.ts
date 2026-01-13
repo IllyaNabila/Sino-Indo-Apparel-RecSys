@@ -27,12 +27,11 @@ export async function POST(request: NextRequest) {
         participants: [senderId, receiverId],
         isEnded: false, // New conversations are not ended
         productContext: productContext,
-        feedbackForm: "inActive",
       });
 
       await Membership.create([
-        { userId: senderId, conversationId: conversation._id },
-        { userId: receiverId, conversationId: conversation._id },
+        { userId: senderId, conversationId: conversation._id, feedbackForm: "inActive" },
+        { userId: receiverId, conversationId: conversation._id, feedbackForm: "inActive", unread: 1 },
       ]);
     }
 
@@ -76,8 +75,18 @@ export async function POST(request: NextRequest) {
       lastMessageAt: message.sentAt,
       isEnded: false, // A new message re-opens the conversation
       productContext: productContext, // Update product context if provided
+    });
+
+    await Membership.updateMany({conversationId: conversation._id}, {
       feedbackForm: "inActive",
     });
+
+    await Membership.findOneAndUpdate(
+      { conversationId: conversation._id, userId: receiverId },
+      { $inc: { unread: 1 } }
+    );
+
+
     return NextResponse.json(message, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -90,8 +99,15 @@ export async function GET(request: NextRequest) {
     const decoded: any = jwt.verify(token!, process.env.TOKEN_SECRET!);
     const senderId = decoded.businessId;
 
-    const memberships = await Membership.find({ userId: senderId });
+    const memberships = await Membership.find({ userId: senderId })
+      .select("conversationId feedbackForm")
+      .lean();
     const conversationIds = memberships.map((m) => m.conversationId);
+
+     // Map conversationId -> feedbackForm (for current user)
+    const feedbackMap = new Map(
+      memberships.map((m: any) => [m.conversationId.toString(), m.feedbackForm])
+    );
 
     const conversations = await Conversation.find({
       _id: { $in: conversationIds },
@@ -112,7 +128,7 @@ export async function GET(request: NextRequest) {
         lastMessageAt: conversation.lastMessageAt,
         isEnded: conversation.isEnded, // A new message re-opens the conversation
         productContext: conversation.productContext, // Update product context if provided
-        feedbackForm: conversation.feedbackForm,
+        feedbackForm: feedbackMap.get(conversation._id.toString()),
       };
     });
 
@@ -124,19 +140,50 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const token = request.cookies.get("token")?.value;
+    const decoded: any = jwt.verify(token!, process.env.TOKEN_SECRET!);
+    const userId = decoded.businessId;
     const conversationId = request.nextUrl.searchParams.get("conversationId");
+    if (!conversationId) {
+      return NextResponse.json(
+        { error: "conversationId is required" },
+        { status: 400 }
+      );
+    }
     const reqBody = await request.json();
     const { isEnded, productContext, feedbackForm } = reqBody;
 
     const updatedConversation = await Conversation.findByIdAndUpdate(
       conversationId,
-      { $set: { isEnded, productContext, feedbackForm } },
+      { $set: { isEnded, productContext } },
       { new: true }
     );
 
     if (!updatedConversation) {
       return NextResponse.json(
         { error: "Conversation not found" },
+        { status: 404 }
+      );
+    }
+
+    let updatedMembership = null;
+    if (feedbackForm === "completed") {
+      updatedMembership = await Membership.findOneAndUpdate(
+        { conversationId, userId },
+        { $set: { feedbackForm } },
+        { new: true }
+      );
+    }
+    if (feedbackForm === "awaiting_rating") {
+      updatedMembership = await Membership.updateMany(
+        { conversationId },
+        { $set: { feedbackForm } },
+        { new: true }
+      );
+    }
+    if (!updatedMembership) {
+      return NextResponse.json(
+        { error: "Membership not found" },
         { status: 404 }
       );
     }

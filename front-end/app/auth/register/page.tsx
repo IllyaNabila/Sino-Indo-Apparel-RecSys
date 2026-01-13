@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { toastApiError } from "@/lib/toastApiError";
 
 //import { useCreateUserWithEmailAndPassword } from "react-firebase-hooks/auth";
 //import { auth } from "@/app/firebase/config";
@@ -38,16 +39,47 @@ export default function RegisterPage() {
     agreeToTerms: false,
   });
 
+  const PASSWORD_RULE =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$/;
+  // explanation:
+  // (?=.*[a-z]) lowercase
+  // (?=.*[A-Z]) uppercase
+  // (?=.*\d) number
+  // (?=.*[^\w\s]) special char
+  // .{8,} length
+
+  const password = formData.password;
+  const confirmPassword = formData.confirmPassword;
+
+  const passwordStrong = PASSWORD_RULE.test(password);
+  const passwordsMatch = password === confirmPassword;
+
+  const passwordError =
+    password.length === 0
+      ? ""
+      : !passwordStrong
+      ? "Use 8+ chars with uppercase, lowercase, number, and symbol."
+      : "";
+
+  const confirmError =
+    confirmPassword.length === 0
+      ? ""
+      : !passwordsMatch
+      ? "Passwords do not match."
+      : "";
+
+  const canSubmit = passwordStrong && passwordsMatch;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.email || !formData.password || !formData.confirmPassword) {
-      alert("Please fill in all fields.");
+      toast.error("Please fill in all fields.");
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match.");
+      toast.error("Passwords do not match.");
       return;
     }
     setLoading(true);
@@ -55,10 +87,9 @@ export default function RegisterPage() {
       const response = await axios.post('/api/auth/register', formData)
       console.log("Signup success", response.data);
       router.push('/auth/business-details')
-    } catch (error: any) {
-      console.log("Signup failed", error.message);
-      
-      toast.error(error.message);
+      toast.success("Signup success")
+    } catch (error) {
+      toastApiError(error)
     }
     setLoading(false);
   };
@@ -111,13 +142,18 @@ export default function RegisterPage() {
                 <Input
                   id="password"
                   type="password"
+                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}"
+                  title="Use 8+ chars with uppercase, lowercase, number, and symbol."
                   placeholder="Create a strong password"
+                  minLength={8}
                   value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
+                  aria-invalid={!!passwordError}
                 />
+                {passwordError && (
+                    <p className="text-sm text-red-600">{passwordError}</p>
+                  )}
               </div>
 
               <div className="space-y-2">
@@ -125,16 +161,20 @@ export default function RegisterPage() {
                 <Input
                   id="confirmPassword"
                   type="password"
+                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}"
+                  title="Use 8+ chars with uppercase, lowercase, number, and symbol."
                   placeholder="Confirm your password"
                   value={formData.confirmPassword}
+                  minLength={8}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      confirmPassword: e.target.value,
-                    })
+                    setFormData({ ...formData, confirmPassword: e.target.value })
                   }
                   required
+                  aria-invalid={!!confirmError}
                 />
+                {confirmError && (
+                  <p className="text-sm text-red-600">{confirmError}</p>
+                )}
               </div>
 
               <div className="space-y-3">
@@ -212,7 +252,7 @@ export default function RegisterPage() {
               
                 type="submit"
                 className="w-full bg-emerald-600 hover:bg-emerald-700"
-                disabled={!formData.agreeToTerms || !formData.role || isLoading}
+                disabled={!formData.agreeToTerms || !formData.role || isLoading || !canSubmit}
               >
                 Create Account
               </Button>

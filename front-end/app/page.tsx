@@ -38,7 +38,7 @@ export default function LandingPage() {
               Login
             </Button>
             <Button className="bg-rose-500 hover:bg-rose-600" disabled={isLoading === "register"} onClick={() => handleNavigation("/auth/register", "register")}>
-              Get Started
+              Register
             </Button>
           </div>
         </div>

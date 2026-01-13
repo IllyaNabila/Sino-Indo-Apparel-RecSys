@@ -48,14 +48,14 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
       });
 
-      toast.success("Login success");
       console.log(response)
-
+      
       setBusinessId(response.data.data.businessId);
       setCompanyName(response.data.data.companyName);
       setBusinessObject(response.data.data.businessObject);
-
+      
       router.push("/dashboard");
+      toast.success("Login success");
     } catch (err: unknown) {
       // Default fallback message
       let message = "Login failed. Please try again.";

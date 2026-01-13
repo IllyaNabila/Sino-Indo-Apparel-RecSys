@@ -34,6 +34,7 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const token = request.cookies.get("token")?.value || "";
 
+
   // 1) Public routes
   if (isPublicPath(path)) {
     // If logged in, redirect to correct home (prevents admin staying on user login, etc.)
@@ -85,6 +86,24 @@ export async function middleware(request: NextRequest) {
     if (!startsWithAny(path, USER_PREFIXES)) {
       return NextResponse.redirect(new URL("/dashboard", request.nextUrl));
     }
+  }
+
+  if (role !== "admin") {
+    const payload = await getPayload(token);
+    const isVerified = Boolean(payload.verified) || false;
+    const isLicenseUploaded = Boolean(payload.licenseUploaded) || false;
+    const businessId = String(payload.businessId || "");
+    // IMPORTANT: use "/products" and "/chat" (with slash)
+    if (!isVerified && startsWithAny(path, ["/products", "/chat"])) {
+      return NextResponse.redirect(new URL("/dashboard", request.nextUrl));
+    }
+    if (!businessId && startsWithAny(path, USER_PREFIXES)) {
+      return NextResponse.redirect(new URL("/auth/business-details", request.nextUrl));
+    }
+    if (!isLicenseUploaded && startsWithAny(path, USER_PREFIXES)) {
+      return NextResponse.redirect(new URL("/auth/license-upload", request.nextUrl));
+    }
+    
   }
 
   // 5) Optional: if they hit "/" while logged in, send to role home

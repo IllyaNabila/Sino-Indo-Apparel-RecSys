@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { Package } from "lucide-react";
+import toast from "react-hot-toast";
 
 type ChatMessageContentProps = {
   content: string;
@@ -34,7 +35,7 @@ export const ChatMessageContent = ({
           const { data } = await axios.get(`/api/products?id=${productId}`);
           setProduct(data);
         } catch (error) {
-          console.error("Failed to fetch product for chat message:", error);
+          console.log("Product no longer available");
         } finally {
           setLoading(false);
         }

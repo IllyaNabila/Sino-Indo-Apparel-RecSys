@@ -1,4 +1,4 @@
-import { connect } from "@/dbConfig/dbConfig";
+  import { connect } from "@/dbConfig/dbConfig";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import Membership from "@/models/conversationMembershipModel";
@@ -10,23 +10,15 @@ export async function PATCH(request: NextRequest) {
     const token = request.cookies.get("token")?.value;
     const decodedToken: any = jwt.verify(token!, process.env.TOKEN_SECRET!);
     const userId = decodedToken.businessId;
-    const unreadCounts = await request.json();
+    const conversationId = request.nextUrl.searchParams.get("conversationId");
 
-    const updates = Object.entries(unreadCounts).map(
-      async ([conversationId, unread]) => {
-        return Membership.updateOne(
-          { userId, conversationId },
-          { $set: { unread } },
-          { upsert: true }
-        );
-      }
+    await Membership.findOneAndUpdate(
+      { conversationId, userId },
+      { $set: { unread: 0} },
+      { new: true }
     );
+    return NextResponse.json({ ok: true });
 
-    await Promise.all(updates);
-    return NextResponse.json(
-      { message: "Successfully update unread counts" },
-      { status: 200 }
-    );
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -51,20 +43,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const memberships = await Membership.find({ userId });
-    if (!memberships) {
-      return NextResponse.json(
-        { error: "No memberships found for the user" },
-        { status: 404 }
-      );
-    }
+    const memberships = await Membership.find({ userId }).select("conversationId unread").lean();
+    const map: Record<string, number> = {};
+    memberships.forEach(m => { map[m.conversationId.toString()] = m.unread || 0; });
 
-    const unreadCounts = memberships.reduce((acc, m) => {
-      acc[m.conversationId] = m.unread || 0;
-      return acc;
-    }, {});
-
-    return NextResponse.json(unreadCounts, { status: 200 });
+    return NextResponse.json(map, { status: 200 });
   } catch (error: any) {
     console.error("Error in GET /api/chat/unread:", error.message);
     return NextResponse.json(

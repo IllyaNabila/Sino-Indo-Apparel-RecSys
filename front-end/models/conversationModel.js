@@ -13,7 +13,6 @@ const conversationSchema = new mongoose.Schema(
     lastMessageAt: Date,
     isEnded: Boolean,
     productContext: String,
-    feedbackForm: String,
   },
   {
     timestamps: true,

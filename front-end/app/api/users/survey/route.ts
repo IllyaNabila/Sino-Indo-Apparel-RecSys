@@ -37,7 +37,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const reqBody = await request.json();
-    const { surveyData, customTags } = reqBody;
+    const surveyData = reqBody?.surveyData || {};
+    const customTags = reqBody?.customTags || [];
 
     console.log(reqBody);
 
@@ -56,14 +57,18 @@ export async function POST(request: NextRequest) {
 
     const newPreference = new Preference({
       businessId,
-      primaryMarkets: surveyData.primaryMarkets,
-      productCategories: surveyData.productCategories,
-      materials: surveyData.materials,
-      customTags,
-      primaryMarkets_norm: normalizeArray(surveyData.primaryMarkets),
-      productCategories_norm: normalizeArray(surveyData.productCategories),
-      materials_norm: normalizeArray(surveyData.materials),
-      customTags_norm: normalizeArray(customTags),
+
+      // ✅ save empty arrays if nothing provided
+      primaryMarkets: surveyData.primaryMarkets || [],
+      productCategories: surveyData.productCategories || [],
+      materials: surveyData.materials || [],
+      customTags: customTags || [],
+
+      // ✅ don’t crash when empty
+      primaryMarkets_norm: normalizeArray(surveyData.primaryMarkets || []),
+      productCategories_norm: normalizeArray(surveyData.productCategories || []),
+      materials_norm: normalizeArray(surveyData.materials || []),
+      customTags_norm: normalizeArray(customTags || []),
     });
 
     const savedPreference = await newPreference.save();
