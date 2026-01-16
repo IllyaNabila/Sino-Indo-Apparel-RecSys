@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import axios from "axios";
+import { useBusiness } from "@/context/BusinessContext";
 
 // Dynamically import the ProfileButton with SSR turned off
 const ProfileButton = dynamic(() => import("@/components/ProfileButton"), {
@@ -145,8 +146,18 @@ type DashboardAnalyticsResponse = {
 export default function DashboardPage() {
   const router = useRouter();
 
+  const { businessId, businessObject } = useBusiness();
+  
+    const country = businessObject?.country;
+  
+    const [mounted, setMounted] = useState(false);
+  
+    useEffect(() => {
+      setMounted(true);
+    }, []);
+
   // Your existing filter state (already in file)
-  const [country, setCountry] = useState("all");
+  //const [country, setCountry] = useState("all");
   const [region, setRegion] = useState("all");
   const [season, setSeason] = useState("all");
   const [demographic, setDemographic] = useState("all");
@@ -168,6 +179,38 @@ export default function DashboardPage() {
   }
 
   const companyScrollRef = useRef<HTMLDivElement>(null)
+  
+  const toTitleCase = (str: string) =>
+  str
+    .toLowerCase()
+    .split(" ")
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+
+  const normalizePieData = (data: any) => {
+    if (!data?.labels || !data?.datasets?.[0]?.data) return data;
+
+    const map = new Map<string, number>();
+
+    data.labels.forEach((label: string, i: number) => {
+      const key = label.toLowerCase(); // case-insensitive key
+      const value = data.datasets[0].data[i] ?? 0;
+      map.set(key, (map.get(key) ?? 0) + value);
+    });
+
+    return {
+      ...data,
+      labels: Array.from(map.keys()).map(toTitleCase),
+      datasets: [
+        {
+          ...data.datasets[0],
+          data: Array.from(map.values()),
+        },
+      ],
+    };
+  };
+
+
 
   const scrollCompanies = (direction: "left" | "right") => {
     if (!companyScrollRef.current) return
@@ -207,6 +250,19 @@ export default function DashboardPage() {
     }
   };
 
+  const hashString = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) - hash + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash);
+  };
+
+  const colorFromLabel = (label: string) =>
+    palette[hashString(label) % palette.length];
+
+
   const palette = [
     { bg: "rgba(59,130,246,0.5)", border: "rgb(59,130,246)" }, // blue
     { bg: "rgba(236,72,153,0.5)", border: "rgb(236,72,153)" }, // pink
@@ -236,37 +292,72 @@ export default function DashboardPage() {
   };
 
   const withColorsPie = (incoming: any, fallback: any) => {
-    if (!incoming?.datasets) return fallback;
+    if (!incoming?.labels || !incoming?.datasets?.[0]) return fallback;
 
-    const merged = {
-      ...fallback,
-      ...incoming,
-    };
+    const labels = incoming.labels;
+    const dataset = incoming.datasets[0];
 
     return {
-      ...merged,
-      datasets: incoming.datasets.map((ds: any, i: number) => {
-        const base = palette[i % palette.length]; // used for non-pie charts
-
-        // For pie/doughnut charts: color per slice
-        const isArrayData = Array.isArray(ds.data);
-        const sliceBg = isArrayData
-          ? ds.data.map((_: any, j: number) => palette[j % palette.length].bg)
-          : base.bg;
-
-        const sliceBorder = isArrayData
-          ? ds.data.map((_: any, j: number) => palette[j % palette.length].border)
-          : base.border;
-
-        return {
-          ...fallback.datasets?.[i],   // keep fallback defaults if any
-          ...ds,
-          backgroundColor: ds.backgroundColor ?? sliceBg,
-          borderColor: ds.borderColor ?? sliceBorder,
-        };
-      }),
+      ...incoming,
+      datasets: [
+        {
+          ...dataset,
+          backgroundColor: labels.map(
+            (_: string, i: number) => palette[i % palette.length].bg
+          ),
+          borderColor: labels.map(
+            (_: string, i: number) => palette[i % palette.length].border
+          ),
+          borderWidth: 1,
+        },
+      ],
     };
   };
+
+const normalizeAndColorPie = (incoming: any) => {
+  if (!incoming?.labels || !incoming?.datasets?.[0]) return incoming;
+
+  const map = new Map<
+    string,
+    { label: string; value: number }
+  >();
+
+  incoming.labels.forEach((rawLabel: string, i: number) => {
+    const key = rawLabel.toLowerCase().trim();
+    const value = incoming.datasets[0].data[i] ?? 0;
+
+    if (!map.has(key)) {
+      map.set(key, {
+        label: rawLabel
+          .toLowerCase()
+          .replace(/\b\w/g, c => c.toUpperCase()), // title case
+        value,
+      });
+    } else {
+      map.get(key)!.value += value;
+    }
+  });
+
+  const labels = Array.from(map.values()).map(v => v.label);
+  const data = Array.from(map.values()).map(v => v.value);
+
+  return {
+    labels,
+    datasets: [
+      {
+        data,
+        backgroundColor: labels.map(
+          (_: string, i: number) => palette[i % palette.length].bg
+        ),
+        borderColor: labels.map(
+          (_: string, i: number) => palette[i % palette.length].border
+        ),
+        borderWidth: 1,
+      },
+    ],
+  };
+};
+
 
   // ✅ Load analytics whenever filters change
   useEffect(() => {
@@ -280,7 +371,7 @@ export default function DashboardPage() {
     [dash]
   );
   const regional = useMemo(
-    () => withColorsPie(dash?.charts?.regional, REGION_DATA),
+    () => withColorsPie(normalizeAndColorPie(dash?.charts?.regional), REGION_DATA),
     [dash]
   );
   const seasonal = useMemo(
@@ -597,8 +688,7 @@ export default function DashboardPage() {
                 <CardHeader>
                   <CardTitle>Product Type Trends</CardTitle>
                   <CardDescription>
-                    Monthly trends in {country === "all" ? "all countries" : country}
-                    {region !== "all" ? `, ${region}` : ""}
+                    Monthly trends in {mounted && country === "china" ? "Indonesia" : "China"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="h-[400px]">
@@ -607,6 +697,11 @@ export default function DashboardPage() {
                     options={{
                       responsive: true,
                       maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          onClick: () => {},
+                        },
+                      },
                     }}
                   />
                 </CardContent>
@@ -619,7 +714,7 @@ export default function DashboardPage() {
                   <CardTitle>Regional Market Distribution</CardTitle>
                   <CardDescription>
                     Market share by region in{" "}
-                    {country === "all" ? "all countries" : country}
+                    {mounted && country === "china" ? "Indonesia" : "China"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="h-[400px]">
@@ -628,6 +723,11 @@ export default function DashboardPage() {
                     options={{
                       responsive: true,
                       maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          onClick: () => {},
+                        },
+                      },
                     }}
                   />
                 </CardContent>
@@ -639,8 +739,7 @@ export default function DashboardPage() {
                 <CardHeader>
                   <CardTitle>Seasonal Product Patterns</CardTitle>
                   <CardDescription>
-                    Seasonal trends in {country === "all" ? "all countries" : country}
-                    {region !== "all" ? `, ${region}` : ""}
+                    Seasonal trends in {mounted && country === "china" ? "Indonesia" : "China"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="h-[400px]">
@@ -649,6 +748,16 @@ export default function DashboardPage() {
                     options={{
                       responsive: true,
                       maintainAspectRatio: false,
+                      scales: {
+                        y: {
+                          min: 0,
+                        },
+                      },                      
+                      plugins: {
+                        legend: {
+                          onClick: () => {},
+                        },
+                      },
                     }}
                   />
                 </CardContent>

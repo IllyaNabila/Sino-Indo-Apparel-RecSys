@@ -296,10 +296,13 @@ export default function ChatPage() {
     }
   };
 
+  const isEmpty = message.trim().length === 0;
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || !currentChat) return;
 
+    if (isCurrentConversationEnded || isEmpty) return;
     const msg: MessagesUI = {
       id: generateObjectId(),
       sender: businessId,
@@ -646,7 +649,7 @@ console.log("ended")
                     <Button
                       type="submit"
                       className="bg-rose-500 hover:bg-rose-600"
-                      disabled={isCurrentConversationEnded}
+                      disabled={isCurrentConversationEnded || isEmpty}
                     >
                       <Send className="h-4 w-4" />
                     </Button>
