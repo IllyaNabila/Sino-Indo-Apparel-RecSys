@@ -7,6 +7,13 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 const AI_URL = process.env.NEXT_PUBLIC_AI_URL || "http://localhost:8000";
 
+// --- Domain Keywords for Fallback Layer Filtering ---
+const DOMAIN_KEYWORDS = [
+  "cotton", "polyester", "silk", "denim", "fabric", "textile", "shirt", "pant", 
+  "apparel", "garment", "clothing", "wear", "supplier", "manufacturer", "factory", 
+  "importer", "vendor", "moq", "price", "bulk", "order", "shipping", "sourcing"
+];
+
 // 1) Define the JSON you want Gemini to return
 const GeminiParseSchema = z.object({
   cleaned: z.string(),
@@ -28,21 +35,24 @@ const GeminiParseSchema = z.object({
   }),
   confidence: z.number().min(0).max(1),
   clarifyingQuestion: z.string().nullable(),
+  // Added irrelevant filter for AI layer
+  isRelevant: z.boolean().describe("True if query is about apparel, textiles, or sourcing. False for food, jokes, or general info.")
 });
 
 async function parseWithGemini(rawQuery: string) {
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
   const prompt = `
-You are a STRICT query parser for a B2B apparel recommender.
-Return ONLY JSON that matches the provided schema.
-Rules:
-- Do NOT invent materials/categories. If not present, use [] or null.
-- If user excludes something (e.g., "no polyester"), put it in excludeMaterials.
-- cleaned should be the normalized query (lowercase, trimmed, no filler words, remove special characters).
-- confidence: 0..1
-User query: ${JSON.stringify(rawQuery)}
-`.trim();
+    You are a STRICT query parser for a B2B apparel recommender.
+    Return ONLY JSON that matches the provided schema.
+    Rules:
+    - Do NOT invent materials/categories. If not present, use [] or null.
+    - If user excludes something (e.g., "no polyester"), put it in excludeMaterials.
+    - cleaned should be the normalized query (lowercase, trimmed, no filler words, remove special characters).
+    - confidence: 0..1
+    - isRelevant: Set to false if the query is unrelated to the textile/apparel industry.
+    User query: ${JSON.stringify(rawQuery)}
+    `.trim();
 
   const resp = await ai.models.generateContent({
     model: "gemini-2.5-flash",
@@ -62,25 +72,33 @@ export async function POST(req: Request) {
   try {
     const { query, userRole, userId } = await req.json();
 
-    // A) Try Gemini first
+    // A) Layer 1: Gemini Relevance Check
     let gemini = null as null | z.infer<typeof GeminiParseSchema>;
-    {
-      /**try {
+    try {
       gemini = await parseWithGemini(query);
-      console.log("gemini:", gemini);
+      if (gemini && gemini.isRelevant === false) {
+        return returnOffTopicResponse(gemini);
+      }
     } catch (e) {
       console.warn("Gemini parse failed, falling back to /api/nlp:", e);
-    }*/
     }
 
-    // B) Fallback: your existing rule-based NLP
+    // B) Layer 2: Fallback NLP + Manual Keyword Guard
     const nlpRes = await fetch(`${BASE_URL}/api/nlp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query }),
     });
     const nlp = await nlpRes.json();
-    console.log("nlp:", nlp);
+
+    // Verification for Fallback Layer
+    const hasSourcingData = nlp.materials?.length > 0 || nlp.category;
+    const hasKeywordMatch = DOMAIN_KEYWORDS.some(k => query.toLowerCase().includes(k));
+
+    // If both layers fail to find relevance, block the request
+    if (!hasSourcingData && !hasKeywordMatch && (!gemini || gemini.intent === "unknown")) {
+      return returnOffTopicResponse(nlp);
+    }
 
     // Choose which parsed values to use
     const cleaned = gemini?.cleaned || nlp.cleaned || query;
@@ -88,15 +106,7 @@ export async function POST(req: Request) {
     const category = gemini?.category ?? nlp.category ?? null;
     const location = gemini?.location ?? nlp.location ?? null;
 
-    // (Optional) keep this if you really need it every request
-    {/**const embedall = await fetch(`${AI_URL}/api/embed-all`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
-    const embed = await embedall.json();
-    console.log("embed:", embed);*/}
-
-    // C) Call FastAPI recommender (same payload as your current code)
+    // C) Call FastAPI recommender
     const recRes = await fetch(`${AI_URL}/api/recommend`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -112,13 +122,9 @@ export async function POST(req: Request) {
 
     const data = await recRes.json();
 
-    // Optionally attach what Gemini understood (handy for debugging)
     return NextResponse.json({
       ...data,
-      debug: {
-        gemini,
-        nlp,
-      },
+      debug: { gemini, nlp },
     });
   } catch (e: any) {
     return NextResponse.json(
@@ -126,4 +132,13 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+}
+
+// Helper function for irrelevant responses
+function returnOffTopicResponse(debugInfo: any) {
+  return NextResponse.json({
+    matches: [],
+    message: "I am your B2B sourcing assistant. I specialize in apparel, textiles, and manufacturing partners. Please try a query related to those topics.",
+    debug: debugInfo
+  });
 }
