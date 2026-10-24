@@ -1,8 +1,12 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
 fastapi
 uvicorn[standard]
 pydantic
 numpy
 scikit-learn
+torch
 sentence-transformers
-pymongo
+pymongo[srv]
+dnspython
+certifi
 python-dotenv
