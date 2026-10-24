@@ -61,8 +61,9 @@ const navigationItems = [
     try {
       await axios.post("/api/auth/logout");
       clearBusiness();
-      router.push("/");
       toast.success("Logged out successful");
+      router.replace("/");
+      router.refresh();
     } catch (error) {
       toastApiError(error);
     }

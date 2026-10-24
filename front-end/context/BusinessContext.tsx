@@ -49,15 +49,29 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   useEffect(() => {
-    localStorage.setItem("businessId", businessId);
-    localStorage.setItem("companyName", companyName);
-    localStorage.setItem("businessObject", JSON.stringify(businessObject));
+    if (businessId) {
+      localStorage.setItem("businessId", businessId);
+    } else {
+      localStorage.removeItem("businessId");
+    }
+
+    if (companyName) {
+      localStorage.setItem("companyName", companyName);
+    } else {
+      localStorage.removeItem("companyName");
+    }
+
+    if (businessObject) {
+      localStorage.setItem("businessObject", JSON.stringify(businessObject));
+    } else {
+      localStorage.removeItem("businessObject");
+    }
   }, [businessId, companyName, businessObject]);
 
   const clearBusiness = () => {
     setBusinessId("");
     setCompanyName("");
-    setBusinessObject("");
+    setBusinessObject(null);
     localStorage.removeItem("businessId");
     localStorage.removeItem("companyName");
     localStorage.removeItem("businessObject");

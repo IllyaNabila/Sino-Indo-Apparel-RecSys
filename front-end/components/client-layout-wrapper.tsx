@@ -1,17 +1,35 @@
 "use client"
 
 import type React from "react"
+import { useEffect, useState } from "react"
 
 import { usePathname } from "next/navigation"
 import Navigation from "@/components/navigation"
+import { useBusiness } from "@/context/BusinessContext"
+
+const USER_NAV_PREFIXES = [
+  "/dashboard",
+  "/search",
+  "/products",
+  "/chat",
+  "/profile",
+  "/feedback",
+]
 
 export default function ClientLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { businessId } = useBusiness()
+  const [mounted, setMounted] = useState(false)
 
-  // Pages that should NOT show navigation
-  const noNavPaths = ["/", "/auth/login", "/auth/register", "/auth/business-details", "/auth/license-upload", "/auth/survey", "/auth/forgot-password", "/auth/reset-password", "/admin", "/admin/login"]
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
-  const showNavigation = !noNavPaths.includes(pathname)
+  const isUserRoute = USER_NAV_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
+  )
+
+  const showNavigation = isUserRoute && (!mounted || Boolean(businessId))
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -20,3 +38,4 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
     </div>
   )
 }
+

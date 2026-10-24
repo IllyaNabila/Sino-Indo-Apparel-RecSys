@@ -1,8 +1,12 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+import path from "path";
 import bcryptjs from "bcryptjs";
 import mongoose from "mongoose";
-import User from "@/models/userModel"; // adjust path
-import { connect } from "@/dbConfig/dbConfig"; // adjust path
+import User from "../models/userModel";
+import { connect } from "../dbConfig/dbConfig";
+
+dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
 async function seed() {
   await connect();
