@@ -6,7 +6,7 @@ import Business from '@/models/businessModel';
 
 connect();
 
-const NEXT_PUBLIC_AI_URL = process.env.NEXT_PUBLIC_AI_URL || "http://localhost:8000";
+const NEXT_PUBLIC_AI_URL = (process.env.NEXT_PUBLIC_AI_URL || "http://localhost:8000").replace(/\/+$/, "");
 
 function normalizeText(text?: string) {
   if (!text) return "";

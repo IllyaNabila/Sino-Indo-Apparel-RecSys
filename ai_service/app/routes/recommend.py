@@ -26,7 +26,7 @@ class RecommendIn(BaseModel):
     query_category: Optional[str] = None
     query_location: Optional[str] = None
     query_tag: Optional[str] = None
-    userId: str
+    userId: Optional[str] = ""
     userRole: Optional[str] = None  # "importer" or "manufacturer"
     top_k: int = 10
     strong_threshold: float = 0.55  # can tune
@@ -64,8 +64,10 @@ class RecommendOut(BaseModel):
     fallbackMode: str  # "none" | "weakSemantic" | "preference" | "relaxed"
 
 
-def _fetch_user_prefs(user_id: str) -> Dict[str, Any]:
-    preference = preferences_col.find_one({"businessId": ObjectId(user_id)}) or {}
+def _fetch_user_prefs(user_id: Optional[str]) -> Dict[str, Any]:
+    preference = {}
+    if user_id and ObjectId.is_valid(str(user_id)):
+        preference = preferences_col.find_one({"businessId": ObjectId(str(user_id))}) or {}
     return {
         "primaryMarkets": preference.get("primaryMarkets_norm", []),
         "productCategories": preference.get("productCategories_norm", []),

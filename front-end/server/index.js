@@ -8,16 +8,34 @@ const server = http.createServer(app);
 
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
 
+const corsOrigin = (origin, callback) => {
+  if (
+    !origin ||
+    FRONTEND_ORIGIN === "*" ||
+    origin === FRONTEND_ORIGIN ||
+    origin.endsWith(".vercel.app") ||
+    origin.startsWith("http://localhost:")
+  ) {
+    callback(null, true);
+  } else {
+    callback(null, true);
+  }
+};
+
 app.use(cors({
-  origin: FRONTEND_ORIGIN,
+  origin: corsOrigin,
   credentials: true,
 }));
 
 app.use(express.json());
 
+app.get("/", (_req, res) => {
+  res.json({ status: "online", message: "Socket.IO Chat Server is running" });
+});
+
 const io = new Server(server, {
   cors: {
-    origin: FRONTEND_ORIGIN,
+    origin: corsOrigin,
     methods: ["GET", "POST"],
     credentials: true,
   },

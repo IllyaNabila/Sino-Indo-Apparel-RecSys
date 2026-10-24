@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
+import { cleanQuery, classifyIntent, extractEntities } from "@/lib/nlp";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-const AI_URL = process.env.NEXT_PUBLIC_AI_URL || "http://localhost:8000";
+const AI_URL = (process.env.NEXT_PUBLIC_AI_URL || "http://localhost:8000").replace(/\/+$/, "");
 
 // --- Domain Keywords for Fallback Layer Filtering ---
 const DOMAIN_KEYWORDS = [
@@ -40,6 +40,9 @@ const GeminiParseSchema = z.object({
 });
 
 async function parseWithGemini(rawQuery: string) {
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "your_google_gemini_api_key") {
+    return null;
+  }
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
   const prompt = `
@@ -72,6 +75,10 @@ export async function POST(req: Request) {
   try {
     const { query, userRole, userId } = await req.json();
 
+    if (!query || typeof query !== "string" || !query.trim()) {
+      return NextResponse.json({ error: "Query is required" }, { status: 400 });
+    }
+
     // A) Layer 1: Gemini Relevance Check
     let gemini = null as null | z.infer<typeof GeminiParseSchema>;
     try {
@@ -80,19 +87,17 @@ export async function POST(req: Request) {
         return returnOffTopicResponse(gemini);
       }
     } catch (e) {
-      console.warn("Gemini parse failed, falling back to /api/nlp:", e);
+      console.warn("Gemini parse failed, falling back to local NLP:", e);
     }
 
-    // B) Layer 2: Fallback NLP + Manual Keyword Guard
-    const nlpRes = await fetch(`${BASE_URL}/api/nlp`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query }),
-    });
-    const nlp = await nlpRes.json();
+    // B) Layer 2: Direct Fallback NLP + Manual Keyword Guard (no self HTTP fetch needed)
+    const nlpCleaned = cleanQuery(query);
+    const nlpIntent = classifyIntent(nlpCleaned);
+    const nlpEntities = extractEntities(nlpCleaned, query);
+    const nlp = { cleaned: nlpCleaned, intent: nlpIntent, ...nlpEntities };
 
     // Verification for Fallback Layer
-    const hasSourcingData = nlp.materials?.length > 0 || nlp.category;
+    const hasSourcingData = (nlp.materials && nlp.materials.length > 0) || Boolean(nlp.category);
     const hasKeywordMatch = DOMAIN_KEYWORDS.some(k => query.toLowerCase().includes(k));
 
     // If both layers fail to find relevance, block the request
@@ -115,10 +120,19 @@ export async function POST(req: Request) {
         query_material: material,
         query_category: category,
         query_location: location,
-        userRole,
-        userId,
+        userRole: userRole || null,
+        userId: userId || "",
       }),
     });
+
+    if (!recRes.ok) {
+      const errText = await recRes.text().catch(() => "");
+      console.error(`AI service error (${recRes.status}):`, errText);
+      return NextResponse.json(
+        { matches: [], fallbackMode: "relaxed", debug: { gemini, nlp, aiStatus: recRes.status, aiError: errText } },
+        { status: 200 }
+      );
+    }
 
     const data = await recRes.json();
 
@@ -127,6 +141,7 @@ export async function POST(req: Request) {
       debug: { gemini, nlp },
     });
   } catch (e: any) {
+    console.error("Error in /api/recommend:", e);
     return NextResponse.json(
       { error: e?.message ?? "Unknown error" },
       { status: 500 }

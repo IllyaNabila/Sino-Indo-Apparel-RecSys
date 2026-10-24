@@ -6,8 +6,9 @@ import { useBusiness } from "./BusinessContext";
 import axios from "axios";
 import { useRef } from "react";
 
-const SOCKET_URL =
-  process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
+const SOCKET_URL = (
+  process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
 
 type SocketContextType = {
   socket: Socket | null;
@@ -44,8 +45,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     const newSocket = io(SOCKET_URL, {
-      transports: ["websocket"],
+      transports: ["polling", "websocket"],
       autoConnect: true,
+      reconnectionAttempts: 5,
+      timeout: 20000,
     });
     setSocket(newSocket);
 
