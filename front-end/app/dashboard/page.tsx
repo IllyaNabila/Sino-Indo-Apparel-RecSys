@@ -236,7 +236,7 @@ export default function DashboardPage() {
       const status = err?.response?.status;
 
       if (status === 401) {
-        router.push("/login"); // adjust to your real login route
+        router.push("/auth/login");
         return;
       }
 
@@ -361,9 +361,10 @@ const normalizeAndColorPie = (incoming: any) => {
 
   // ✅ Load analytics whenever filters change
   useEffect(() => {
+    if (!businessId) return;
     fetchDashboard();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [country, region, season, demographic]);
+  }, [businessId, country, region, season, demographic]);
 
   // ✅ Use API data if available, otherwise fallback to mock
   const trends = useMemo(

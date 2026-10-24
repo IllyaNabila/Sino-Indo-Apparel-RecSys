@@ -5,4 +5,4 @@ numpy
 scikit-learn
 sentence-transformers
 pymongo
-routes
+python-dotenv

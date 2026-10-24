@@ -10,7 +10,7 @@ const ROLE_HOME: Record<string, string> = {
 
 // Define allowed areas (edit these to match your app)
 const ADMIN_PREFIXES = ["/admin"];
-const USER_PREFIXES = ["/dashboard", "/chat", "/feedback", "/products", "/profile"];
+const USER_PREFIXES = ["/dashboard", "/search", "/chat", "/feedback", "/products", "/profile"];
 
 // Public pages (no login needed)
 function isPublicPath(path: string) {
@@ -120,6 +120,7 @@ export const config = {
     "/auth/:path*",
     "/admin/:path*",
     "/dashboard/:path*",
+    "/search/:path*",
     "/chat/:path*",
     "/feedback/:path*",
     "/products/:path*",
