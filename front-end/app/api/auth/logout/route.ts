@@ -1,20 +1,18 @@
+import { withErrorHandler } from '@/lib/withErrorHandler';
 import {NextResponse} from 'next/server'
 
-export async function GET() {
-    try {
-        const response = NextResponse.json(
-            {
-                message: "Logout successful",
-                success: true,
-            }
-        )
-        response.cookies.set('token', '',
-            {httpOnly: true, expires: new Date(0)}
-        );
-        return response;
-    } catch (error: any) {
-        return NextResponse.json({error: error.message},
-            {status: 500}
-        );
-    }
-}
+export const POST = withErrorHandler(async() => {
+    const response = NextResponse.json(
+        { succses: true, data: { message: "Logged out" } },
+        { status: 200 }
+    );
+    response.cookies.set("token", "", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 0,
+        expires: new Date(0),
+    });
+    return response;
+});

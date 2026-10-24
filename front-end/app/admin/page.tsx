@@ -24,8 +24,13 @@ import {
   Ban,
   UserCheck,
 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import axios from "axios"
+import toast from "react-hot-toast"
+import { toastApiError } from "@/lib/toastApiError"
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedLicense, setSelectedLicense] = useState<number | null>(null)
 
@@ -143,6 +148,18 @@ export default function AdminDashboard() {
     console.log("Unbanning user:", userId)
   }
 
+  const logout = async () => {
+    try {
+      await axios.post("/api/admin/logout");
+      toast.success("Logged out successful")
+      router.push("/admin/login");
+      router.refresh();
+    } catch (err) {
+      toastApiError(err);
+    }
+  };
+
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -155,13 +172,13 @@ export default function AdminDashboard() {
             <p className="text-slate-600">Review and manage business license submissions</p>
           </div>
           <div className="flex items-center space-x-4">
-            <Link
-              href="/"
-              className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            <Button
+              onClick={logout}
+              className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-slate-600 bg-slate-50 hover:bg-slate-50 hover:text-slate-900"
             >
               <LogOut className="mr-3 h-5 w-5 text-slate-400 group-hover:text-slate-500" />
-              Sign Out
-            </Link>
+              Log Out
+            </Button>
             {/**
             <Button variant="outline">
               <Download className="h-4 w-4 mr-2" />

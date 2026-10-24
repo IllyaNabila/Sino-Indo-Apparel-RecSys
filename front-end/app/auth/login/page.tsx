@@ -45,22 +45,34 @@ export default function LoginPage() {
 
     try {
       const response = await axios.post("/api/auth/login", formData, {
-        timeout: 8000, // optional: avoid hanging forever
         headers: { "Content-Type": "application/json" },
       });
 
-      toast.success("Login success");
-
-      setBusinessId(response.data.businessId);
-      setCompanyName(response.data.companyName);
-      setBusinessObject(response.data.businessObject);
-
+      console.log(response)
+      
+      setBusinessId(response.data.data.businessId);
+      setCompanyName(response.data.data.companyName);
+      setBusinessObject(response.data.data.businessObject);
+      
       router.push("/dashboard");
+      toast.success("Login success");
     } catch (err: unknown) {
       // Default fallback message
       let message = "Login failed. Please try again.";
 
+      if (axios.isAxiosError(err)) {
+        const data: any = err.response?.data;
+        message = data?.error?.message || // <-- use message
+          data?.message ||
+          data?.error ||          // fallback if older backend sends string error
+          err.message ||
+          "Something went wrong";
+
+        return toast.error(message);
+      }
+      
       // Axios-specific handling
+      {/**
       if (axios.isAxiosError(err)) {
         const status = err.response?.status;
 
@@ -76,6 +88,8 @@ export default function LoginPage() {
           message = "No response from server. Check your internet and try again.";
         } else if (status === 401) {
           message = "Invalid email or password.";
+        } else if (status === 403) {
+          message = "Not allowed.";
         } else if (status === 429) {
           message = "Too many attempts. Please wait a moment and try again.";
         } else if (status && status >= 500) {
@@ -87,6 +101,7 @@ export default function LoginPage() {
 
       // Log for debugging (keep it, but don't show raw error to user)
       console.error("Login failed:", err);
+      */}
 
       toast.error(message);
     } finally {
@@ -109,8 +124,12 @@ export default function LoginPage() {
 
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center">
-            <div className="w-12 h-12 bg-emerald-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <span className="text-white font-bold">AB</span>
+            <div className="flex items-center justify-center mx-auto">
+              <img
+                src="/logo-apparelbiz.png"
+                alt="ApparelBiz logo"
+                className="w-20 h-20 rounded-lg object-contain"
+              />
             </div>
             <CardTitle className="text-2xl">Welcome Back</CardTitle>
             <CardDescription>
@@ -148,6 +167,7 @@ export default function LoginPage() {
               </div>
 
               <div className="flex items-center justify-between">
+                {/**
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="remember"
@@ -162,7 +182,7 @@ export default function LoginPage() {
                   <Label htmlFor="remember" className="text-sm">
                     Remember me
                   </Label>
-                </div>
+                </div> */}
                 <Link
                   href="/auth/forgot-password"
                   className="text-sm text-emerald-600 hover:underline"

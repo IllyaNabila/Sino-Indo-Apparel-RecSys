@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import Business from "@/models/businessModel";
 import { detectLang, translateText } from "@/lib/translation";
 import { translateWithHF } from "@/lib/hftranslation";
+import Membership from "@/models/conversationMembershipModel";
 
 connect();
 
@@ -82,6 +83,12 @@ export async function POST(request: NextRequest) {
       lastMessageId: message._id,
       lastMessageAt: message.sentAt,
     });
+
+    await Membership.findOneAndUpdate(
+      { conversationId: conversation._id, userId: receiverId },
+      { $inc: { unread: 1 } }
+    );
+
     return NextResponse.json(message, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

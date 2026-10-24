@@ -23,45 +23,76 @@ export default function LandingPage() {
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-rose-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">SIAM</span>
+            <img
+              src="/logo-apparelbiz.png"
+              alt="ApparelBiz logo"
+              className="w-20 h-20 rounded-lg object-contain"
+            />
+            <div className="leading-tight">
+              <span className="font-bold text-xl text-slate-800">ApparelBiz</span>
+              <div className="text-xs text-slate-500">Sino-Indo Apparel Matcher</div>
             </div>
-            <span className="font-bold text-xl text-slate-800">Sino-Indo Apparel Matcher</span>
           </div>
           <div className="flex items-center space-x-4">
             <Button variant="ghost" disabled={isLoading === "login"} onClick={() => handleNavigation("/auth/login", "login")}>
               Login
             </Button>
             <Button className="bg-rose-500 hover:bg-rose-600" disabled={isLoading === "register"} onClick={() => handleNavigation("/auth/register", "register")}>
-              Get Started
+              Register
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto text-center">
-          <Badge className="mb-4 bg-rose-100 text-rose-800 hover:bg-rose-100">
-            Verified. Matched. Connected.
-          </Badge>
-          <h1 className="text-5xl font-bold text-slate-800 mb-6 leading-tight">
-            Bridging Cultures in the
-            <span className="text-rose-500"> Apparel Industry</span>
-          </h1>
-          <p className="text-xl text-slate-600 mb-8 max-w-3xl mx-auto">
-            Match with verified apparel partners, discover culturally-relevant products, and grow your cross-border business through AI-powered recommendations tailored for the China–Indonesia trade.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-rose-500 hover:bg-rose-600" disabled={isLoading === "start your journey"} onClick={() => handleNavigation("/auth/register", "start your journey")}>
-              Start Your Journey <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-            <Button size="lg" variant="outline">
-              Learn More
-            </Button>
-          </div>
+{/* Hero Section */}
+<section className="py-20 px-4">
+  <div className="container mx-auto">
+    <div className="grid lg:grid-cols-2 gap-12 items-center">
+      {/* Left: Text */}
+      <div className="text-center lg:text-left">
+        <Badge className="mb-4 bg-rose-100 text-rose-800 hover:bg-rose-100">
+          Verified. Matched. Connected.
+        </Badge>
+
+        <h1 className="text-5xl font-bold text-slate-800 mb-6 leading-tight">
+          Bridging Cultures in the
+          <span className="text-rose-500"> Apparel Industry</span>
+        </h1>
+
+        <p className="text-xl text-slate-600 mb-8 max-w-3xl lg:max-w-none">
+          Match with verified apparel partners, discover culturally-relevant products, and grow your cross-border business through AI-powered recommendations tailored for the China–Indonesia trade.
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+          <Button
+            size="lg"
+            className="bg-rose-500 hover:bg-rose-600"
+            disabled={isLoading === "start your journey"}
+            onClick={() => handleNavigation("/auth/register", "start your journey")}
+          >
+            Start Your Journey <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+
+          <Button size="lg" variant="outline">
+            Learn More
+          </Button>
         </div>
-      </section>
+      </div>
+
+      {/* Right: Logo */}
+      <div className="flex justify-center lg:justify-end">
+        <div className="max-w-sm w-full">
+          <img
+            src="/logo-apparelbiz.png"
+            alt="ApparelBiz logo"
+            className="w-100 h-100 mx-auto object-contain"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 
       {/* Features Section 
       <section className="py-16 px-4 bg-white">

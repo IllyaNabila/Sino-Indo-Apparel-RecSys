@@ -1,85 +1,44 @@
 {
   "MATERIALS": [
-    "organic cotton",
-    "cotton",
-    "polyester",
-    "rayon",
-    "spandex",
-    "denim",
-    "linen",
-    "silk",
-    "nylon",
-    "jersey",
-    "fleece",
-    "wool",
-    "viscose",
-    "canvas",
-    "corduroy",
-    "lycra",
-    "modal"
+    "organic cotton","cotton","polyester","rayon","spandex","denim","linen","silk",
+    "nylon","jersey","fleece","wool","viscose","canvas","corduroy","lycra","modal",
+    "bamboo","tencel","lyocell","acetate","chiffon","satin","georgette","crepe",
+    "twill","poplin","oxford","pique","rib knit","interlock","microfiber","neoprene",
+    "poly cotton","cotton blend"
   ],
-
   "CATEGORY": [
-    "children wear",
-    "kids wear",
-    "menswear",
-    "womenswear",
-    "sportswear",
-    "hijab",
-    "hijabs",
-    "outerwear",
-    "uniform",
-    "uniforms",
-    "tshirt",
-    "tshirts",
-    "hoodie",
-    "hoodies",
-    "activewear",
-    "baby clothes",
-    "sleepwear",
-    "dress",
-    "dresses"
+    "children wear","kids wear","menswear","womenswear","sportswear","outerwear",
+    "uniform","tshirt","hoodie","activewear","baby clothes","sleepwear","dress",
+    "abaya","jubah","baju kurung","telekung","kebaya","polo shirt","shirt","blouse",
+    "pants","jeans","skirt","jacket","coat","sweater","cardigan","swimwear",
+    "underwear","loungewear","workwear","socks","cap"
   ],
-
   "ATTRIBUTES": [
-    "breathable",
-    "lightweight",
-    "organic",
-    "waterproof",
-    "premium",
-    "stretchable",
-    "soft",
-    "cooling",
-    "quick dry",
-    "durable"
+    "breathable","lightweight","organic","waterproof","premium","stretchable","soft",
+    "cooling","quick dry","durable","wrinkle free","anti bacterial","anti odor",
+    "uv protection","shrink resistant","colorfast","anti pilling","opaque",
+    "sustainable","eco friendly","oem","odm","custom","private label"
   ],
-
   "LOCATIONS": [
-    "china",
-    "indonesia",
-    "jakarta",
-    "bandung",
-    "surabaya",
-    "yogyakarta",
-    "bali",
-    "guangzhou",
-    "shenzhen",
-    "shanghai",
-    "hangzhou",
-    "beijing",
-    "ningbo"
+    "china","indonesia","jakarta","bandung","surabaya","yogyakarta","bali",
+    "guangzhou","shenzhen","shanghai","hangzhou","beijing","ningbo",
+    "semarang","medan","makassar","malang","solo",
+    "dongguan","xiamen","qingdao","tianjin","suzhou","wuhan","chengdu"
   ],
-
   "MATERIAL_SYNONYMS": {
-    "cotton": ["cotton", "cotton fabric", "soft cotton", "cotton material"],
-    "polyester": ["polyester", "poly", "poly fabric"],
-    "spandex": ["spandex", "stretch material", "lycra"],
-    "rayon": ["rayon", "viscose rayon"],
-    "denim": ["denim", "jeans fabric"],
-    "linen": ["linen", "linen fiber"],
-    "silk": ["silk", "silky"],
-    "nylon": ["nylon", "synthetic nylon"],
-    "jersey": ["jersey", "jersey knit"],
-    "fleece": ["fleece", "soft fleece"]
+    "cotton": ["cotton","cotton fabric","soft cotton","cotton material"],
+    "polyester": ["polyester","poly","poly fabric"],
+    "spandex": ["spandex","stretch material","lycra"],
+    "rayon": ["rayon","viscose rayon","viscose"],
+    "poly cotton": ["polycotton","poly cotton","cotton polyester","cotton poly","tc fabric"],
+    "chiffon": ["chiffon","silky chiffon"],
+    "satin": ["satin","silky satin"]
+  },
+  "BUSINESS_KEYWORDS": {
+    "SERVICES": ["oem", "odm", "custom", "private label", "custom label"],
+    "INCOTERMS": ["fob", "cif", "exw", "ddp", "dap", "cnf"],
+    "CERTIFICATIONS": ["halal", "oeko tex", "oeko-tex", "gots", "iso", "sirim", "bpom"],
+    "TRADE_TERMS": ["wholesale", "factory price", "bulk", "ready stock", "preorder", "dropship"],
+    "PAYMENT": ["tt", "t/t", "lc", "l/c", "cash on delivery", "cod"]
   }
 }

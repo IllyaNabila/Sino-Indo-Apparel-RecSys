@@ -12,7 +12,9 @@ const membershipSchema = new mongoose.Schema({
   unread: {
     type: Number,
     default: 0,
-  }
+  },
+  feedbackForm: String,
+  
 });
 
 // compound index to avoid duplicate memberships

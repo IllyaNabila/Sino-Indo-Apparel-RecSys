@@ -3,42 +3,64 @@ import BusinessLicense from "@/models/licenseModel"
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken'
 import Business from "@/models/businessModel";
+import User from "@/models/userModel";
+import { withErrorHandler } from "@/lib/withErrorHandler";
+import { NotFoundError } from "@/lib/errors";
 
 
 connect()
+export const POST = withErrorHandler(async (request: NextRequest) => {
+  let token = request.cookies.get('token')?.value || '';
+  const decodedToken: any = jwt.verify(token, process.env.TOKEN_SECRET!);
+  const businessId = decodedToken.businessId;
+  const reqBody = await request.json();
+  const {
+      filename,
+      mimetype,
+      data
+  } = reqBody;
+  
+  const newLicense = new BusinessLicense({
+      filename,
+      mimetype,
+      data,
+      verificationStatus: 'pending',
+      businessId
+  })
 
-export async function POST(request: NextRequest) {
-    try {
-        const token = request.cookies.get('token')?.value || '';
-        const decodedToken: any = jwt.verify(token, process.env.TOKEN_SECRET!);
-        const businessId = decodedToken.businessId;
+  const savedLicense = await newLicense.save();
 
-        const reqBody = await request.json();
-        const {
-            filename,
-            mimetype,
-            data
-        } = reqBody;
+  const tokenData = {
+    id: decodedToken.id,
+    email: decodedToken.email,
+    businessId: decodedToken.businessId,
+    verified: decodedToken.verified,
+    licenseUploaded: true,
+  };
+  console.log(tokenData)
 
-        const newLicense = new BusinessLicense({
-            filename,
-            mimetype,
-            data,
-            verificationStatus: 'pending',
-            businessId
-        })
+  token = jwt.sign(tokenData, process.env.TOKEN_SECRET!, {
+    expiresIn: "1d",
+  });
 
-        const savedLicense = await newLicense.save();
+  const response = NextResponse.json(
+      {
+        success: true,
+        data: {
+          message: "License uploaded successfully",
+          success: true,
+          savedLicense
+        },
+      },
+      { status: 200 }
+    );
 
-        return NextResponse.json({
-            message: "License uploaded successfully",
-            success: true,
-            savedLicense
-        });
-    } catch (error: any) {
-        return NextResponse.json({error: error.message}, {status: 500})
-    }
-}
+    response.cookies.set("token", token, {
+      httpOnly: true,
+    });
+    
+    return response
+});
 
 export async function PATCH(req: NextRequest) {
   try {

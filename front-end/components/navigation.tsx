@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useSocket } from "@/context/SocketContext";
 import { useBusiness } from "@/context/BusinessContext";
+import { toastApiError } from "@/lib/toastApiError";
 
 export default function Navigation() {
   const { unreadCounts } = useSocket();
@@ -32,37 +33,39 @@ export default function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const isVerified = !!businessObject?.verified;
-  const navigationItems = isVerified ? [
-    { name: "Search", href: "/search", icon: Search },
-    { name: "Dashboard", href: "/dashboard", icon: Home },
-    { name: "Products", href: "/products", icon: Package },
-    { name: "Messages", href: "/chat", icon: MessageSquare, badge: Object.values(unreadCounts).filter((count) => count > 0).length },
-    //{ name: "Partners", href: "/partners", icon: Users },
-    //{ name: "Feedback", href: "/feedback", icon: MessageSquare },
-  ] :
-  [
-    { name: "Search", href: "/search", icon: Search },
-    { name: "Dashboard", href: "/dashboard", icon: Home },
-    { name: "Products", href: "/products", icon: Package },
-    //{ name: "Messages", href: "/chat", icon: MessageSquare, badge: Object.values(unreadCounts).filter((count) => count > 0).length },
-    //{ name: "Partners", href: "/partners", icon: Users },
-    //{ name: "Feedback", href: "/feedback", icon: MessageSquare },
-  ]
-  ;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+const safeUnreadBadge = mounted
+  ? Object.values(unreadCounts).filter((count) => count > 0).length
+  : 0;
+
+const safeIsVerified = mounted ? !!businessObject?.verified : false;
+
+const navigationItems = [
+  { name: "Search", href: "/search", icon: Search, requiresVerified: false },
+  { name: "Dashboard", href: "/dashboard", icon: Home, requiresVerified: false },
+  { name: "Products", href: "/products", icon: Package, requiresVerified: true },
+
+  // ✅ Lock this when unverified
+  { name: "Messages", href: "/chat", icon: MessageSquare, badge: safeUnreadBadge, requiresVerified: true },
+];
 
   const isActive = (href: string) => pathname === href;
 
   const router = useRouter();
   const logout = async () => {
     try {
-      await axios.get("/api/auth/logout");
+      await axios.post("/api/auth/logout");
       clearBusiness();
-      toast.success("Logged out successfully");
-      router.push("/");
-    } catch (error: any) {
-      console.log(error.message);
-
-      toast.error(error.message);
+      toast.success("Logged out successful");
+      router.replace("/");
+      router.refresh();
+    } catch (error) {
+      toastApiError(error);
     }
   };
 
@@ -72,65 +75,107 @@ export default function Navigation() {
       <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:bg-white lg:border-r">
         <div className="flex flex-col flex-grow pt-5 pb-4 overflow-y-auto">
           {/* Logo */}
-          <div className="flex items-center flex-shrink-0 px-4">
-            {/*<div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">AB</span>
+          <div className="flex flex-col items-center text-center">
+            <div className="h-20 w-20 rounded-xl bg-white ring-1 ring-slate-200 shadow-sm flex items-center justify-center p-2">
+              <img
+                src="/logo-apparelbiz.png"
+                alt="ApparelBiz logo"
+                className="h-full w-full object-contain"
+              />
             </div>
-            <img src="/sino-indo logo.png" className="w-8 h-8 rounded-lg"></img>*/}
-            <span className="ml-2 font-bold text-xl text-slate-800">
-              Sino-Indo Apparel Matcher
-            </span>
+            <div className="mt-3 leading-tight">
+              <div className="font-bold text-slate-900 text-lg">ApparelBiz</div>
+              <div className="text-xs text-slate-500">Sino-Indo Apparel Matcher</div>
+            </div>
           </div>
 
-          {/* User Status */}
+          {/* User Status (no layout shift) */}
           <div className="mt-6 px-4">
-            {!isVerified ? (
-              <div className="flex items-center space-x-2 p-3 bg-red-50 rounded-lg">
-                <ShieldOff className="h-4 w-4 text-red-600" />
-                <span className="text-sm font-medium text-red-800">
-                  Unverified Business
-                </span>
-              </div>
-            ) : (
-            <div className="flex items-center space-x-2 p-3 bg-emerald-50 rounded-lg">
-              <CheckCircle className="h-4 w-4 text-emerald-600" />
-              <span className="text-sm font-medium text-emerald-800">
-                Verified Business
-              </span>
+            <div className="h-[52px]"> {/* fixed height to prevent shifting */}
+              {!mounted ? (
+                // Skeleton placeholder
+                <div className="h-full rounded-lg bg-slate-100 animate-pulse ring-1 ring-slate-200 flex items-center px-3">
+                  <div className="h-4 w-4 rounded bg-slate-200" />
+                  <div className="ml-2 h-4 w-32 rounded bg-slate-200" />
+                </div>
+              ) : !isVerified ? (
+                <div className="h-full flex items-center space-x-2 px-3 bg-red-50 rounded-lg ">
+                  <ShieldOff className="h-4 w-4 text-red-600" />
+                  <span className="text-sm font-medium text-red-800">
+                    Unverified Business
+                  </span>
+                </div>
+              ) : (
+                <div className="h-full flex items-center space-x-2 px-3 bg-emerald-50 rounded-lg ">
+                  <CheckCircle className="h-4 w-4 text-emerald-600" />
+                  <span className="text-sm font-medium text-emerald-800">
+                    Verified Business
+                  </span>
+                </div>
+              )}
             </div>
-            )}
           </div>
+
 
           {/* Navigation */}
           <nav className="mt-6 flex-1 px-2 space-y-1">
-            {navigationItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
-                  isActive(item.href)
-                    ? "bg-blue-100 text-blue-700"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                }`}
-              >
-                <item.icon
-                  className={`mr-3 h-5 w-5 ${
-                    isActive(item.href)
-                      ? "text-blue-700"
-                      : "text-slate-400 group-hover:text-slate-500"
-                  }`}
-                />
-                {item.name}
-                {item.badge ? (
-                  <Badge className="ml-auto bg-blue-500 text-white">
-                    {item.badge}
-                  </Badge>
-                ): (
-                  ""
-                )}
-              </Link>
-            ))}
+            {navigationItems.map((item) => {
+              const disabled = !safeIsVerified && item.requiresVerified;
+
+              const baseClass =
+                "group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors";
+
+              const enabledClass = isActive(item.href)
+                ? "bg-blue-100 text-blue-700"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900";
+
+              const disabledClass =
+                "text-slate-400 cursor-not-allowed opacity-60 bg-slate-50";
+
+              const iconClass = disabled
+                ? "text-slate-300"
+                : isActive(item.href)
+                  ? "text-blue-700"
+                  : "text-slate-400 group-hover:text-slate-500";
+
+              const content = (
+                <>
+                  <item.icon className={`mr-3 h-5 w-5 ${iconClass}`} />
+                  {item.name}
+
+                  {/* Show badge only when enabled */}
+                  {mounted && item.badge && !disabled ? (
+                    <Badge className="ml-auto bg-blue-500 text-white">{item.badge}</Badge>
+                  ) : null}
+
+                  {/* Optional "Locked" badge */}
+                  {disabled ? (
+                    <Badge className="ml-auto bg-slate-200 text-slate-600">Locked</Badge>
+                  ) : null}
+                </>
+              );
+
+              return disabled ? (
+                <span
+                  key={item.name}
+                  className={`${baseClass} ${disabledClass}`}
+                  aria-disabled="true"
+                  title="Verify your business to access this feature"
+                >
+                  {content}
+                </span>
+              ) : (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`${baseClass} ${enabledClass}`}
+                >
+                  {content}
+                </Link>
+              );
+            })}
           </nav>
+
 
           {/* Bottom Actions */}
           <div className="flex-shrink-0 px-2 space-y-1">
@@ -141,13 +186,14 @@ export default function Navigation() {
               <User className="mr-3 h-5 w-5 text-slate-400 group-hover:text-slate-500" />
               Profile
             </Link>
+            {/**
             <Link
               href="/settings"
               className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-slate-600 hover:bg-slate-50 hover:text-slate-900"
             >
               <Settings className="mr-3 h-5 w-5 text-slate-400 group-hover:text-slate-500" />
               Settings
-            </Link>
+            </Link> */}
             <button
               onClick={logout}
               className="group flex w-full items-center px-2 py-2 text-sm font-medium rounded-md text-slate-600 hover:bg-slate-50 hover:text-slate-900"

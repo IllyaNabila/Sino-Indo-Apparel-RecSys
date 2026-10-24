@@ -3,13 +3,21 @@ import User from "@/models/userModel"
 import {NextRequest, NextResponse} from 'next/server';
 import bcryptjs from 'bcryptjs'
 import jwt from "jsonwebtoken";
+import { ConflictError, ValidationError } from "@/lib/errors";
+import { withErrorHandler } from "@/lib/withErrorHandler";
 
 connect()
 
-export async function POST(request: NextRequest) {
-    try {
+export const POST = withErrorHandler(async (request: NextRequest) => {
         const reqBody = await request.json()
         const {email, password, role} = reqBody
+
+        const PASSWORD_RULE =
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$/;
+
+        if (!PASSWORD_RULE.test(password)) {
+            throw new ValidationError("Password must be 8+ chars and include uppercase, lowercase, number, and symbol.")
+        }
 
         console.log(reqBody);
         
@@ -17,7 +25,7 @@ export async function POST(request: NextRequest) {
         const user = await User.findOne({email})
 
         if(user) {
-            return NextResponse.json({error: "User already exists"}, {status: 400})
+            throw new ConflictError("User already exists");
         }
 
         //hash password 
@@ -53,9 +61,4 @@ export async function POST(request: NextRequest) {
             httpOnly: true,
         })
         return response;
-        
-    } catch (error: any) {
-      return NextResponse.json({error: error.message},
-        {status: 500})
-    }
-}
+});

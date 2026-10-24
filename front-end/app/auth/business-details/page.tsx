@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Link from "next/link"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 import axios from 'axios';
+import { toastApiError } from "@/lib/toastApiError";
 
 export default function BusinessDetailsPage() {
   const { businessId, companyName, setBusinessId, setCompanyName, setBusinessObject } = useBusiness();
@@ -65,11 +66,12 @@ export default function BusinessDetailsPage() {
     try {
       const response = await axios.post('/api/users/business-details', formData)
       console.log("Businsess registration success", response.data);
-      setBusinessId(response.data.savedBusiness?._id);
-      setCompanyName(response.data.savedBusiness?.companyName);
-      setBusinessObject(response.data.savedBusiness);
+      setBusinessId(response.data.data.savedBusiness?._id);
+      setCompanyName(response.data.data.savedBusiness?.companyName);
+      setBusinessObject(response.data.data.savedBusiness);
       router.push(`/auth/license-upload`);
     } catch (error: any) {
+      toastApiError(error)
       console.log("Business registration failed", error.message);
     }
   }
@@ -79,12 +81,13 @@ export default function BusinessDetailsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
+        {/**
         <div className="mb-6">
-          <Link href="/auth" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+          <Link href="/auth/register" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
             <span>Back to authentication</span>
           </Link>
-        </div>
+        </div> */}
 
         <Card>
           <CardHeader className="text-center pb-6">
@@ -179,13 +182,12 @@ export default function BusinessDetailsPage() {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="address">Business Address *</Label>
-                  <Textarea
+                  <Label htmlFor="address">State/Province *</Label>
+                  <Input
                     id="address"
                     name="address"
                     value={formData.address}
                     onChange={handleChange}
-                    rows={3}
                     required
                   />
                 </div>
@@ -236,7 +238,7 @@ export default function BusinessDetailsPage() {
               </div>
 
               <div className="flex justify-end">
-                <Button type="submit" className="gap-2">
+                <Button type="submit" className="gap-2" disabled={!formData}>
                   Continue to License Upload <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>

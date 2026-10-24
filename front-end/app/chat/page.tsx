@@ -25,6 +25,12 @@ import { useSocket } from "@/context/SocketContext";
 import { ChatMessageContent } from "@/app/chat/ChatMessageContent";
 import { FeedbackForm } from "@/app/chat/FeedbackForm";
 import { CompanyProfileModal } from "@/app/chat/CompanyProfileModal";
+import dynamic from "next/dynamic";
+
+// Dynamically import the ProfileButton with SSR turned off
+const ProfileButton = dynamic(() => import("@/components/ProfileButton"), {
+  ssr: false,
+});
 
 type ConversationUI = {
   id: string;
@@ -129,7 +135,6 @@ export default function ChatPage() {
       const { data } = await axios.get("/api/chat");
       const mapped = data.map(toConversationUI);
       setConversationsDetails(mapped);
-      console.log(data)
     } catch (error: any) {
       console.error("Error loading conversation:", error);
     }
@@ -141,20 +146,31 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!selectedChat) return;
-    if (socket) {
-      socket.emit("joinConversation", selectedChat);
-    }
-    const fetchMessages = async () => {
+
+    // join room
+    socket?.emit("joinConversation", selectedChat);
+
+    // mark read in DB + update UI
+    (async () => {
+      try {
+        await axios.patch(`/api/chat/unread?conversationId=${selectedChat}`);
+        setUnreadCounts(prev => ({ ...prev, [selectedChat]: 0 }));
+      } catch (e) {
+        console.error("mark read failed", e);
+      }
+    })();
+
+    // fetch messages ONCE per selectedChat
+    (async () => {
       try {
         const { data } = await axios.get(`/api/chat/${selectedChat}/messages`);
-        const mapped = data.map(toMessageUI);
-        setMessages(mapped);
-      } catch (error: any) {
-        console.error("Error loading messages:", error);
+        setMessages(data.map(toMessageUI));
+      } catch (e) {
+        console.error(e);
       }
-    };
-    fetchMessages();
-  }, [unreadCounts]);
+    })();
+  }, [selectedChat, socket]);
+
 
   // Effect to check for new product context and reset conversation state
   {/**useEffect(() => {
@@ -174,17 +190,10 @@ export default function ChatPage() {
 
   useEffect(() => {
     const handleReceiveMessage = (data: any) => {
-      console.log("data", data);
-      console.log(data.msg.sender === businessId.toString());
-      console.log("data.msg.sender", data.msg.sender);
-      console.log("businessId", businessId);
-      console.log("data.selectedChat", data.selectedChat);
-      console.log("Selected Chat:", selectedChat);
-      console.log("date:", data.msg.timestamp);
-      // Check if the message is from the current user
+      // ignore my own message
       if (data.msg.sender === businessId.toString()) return;
 
-      // Update the conversations list with the new message
+      // update conversation preview (last message)
       setConversationsDetails((prev) =>
         prev.map((conversation) =>
           conversation.id === data.selectedChat
@@ -192,38 +201,24 @@ export default function ChatPage() {
                 ...conversation,
                 lastMessage: data.msg.content,
                 lastMessageSender: data.msg.sender,
-                unread: conversation.id === selectedChat ? 0 : conversation.unread + 1, // Increment unread count if not the selected chat
+                // ❌ no unread changes here
               }
             : conversation
         )
       );
 
-      // If the message belongs to the currently selected chat, add it to the messages list
+      // if this conversation is currently open, append message
       if (data.selectedChat === selectedChat) {
-        const uiMsg = toMessageUI(data.msg);
-        setMessages((prev) => [...prev, uiMsg]);
-        setUnreadCounts((prev) => ({
-          ...prev,
-          [data.selectedChat]: 0,
-        }));
+        setMessages((prev) => [...prev, toMessageUI(data.msg)]);
       }
-
-      console.log("unread Counts:", unreadCounts);
     };
 
-    if (socket) {
-      socket.on("receiveMessage", handleReceiveMessage);
-    }
+    if (socket) socket.on("receiveMessage", handleReceiveMessage);
     return () => {
-      if (socket) {
-        socket.off("receiveMessage", handleReceiveMessage);
-      }
+      if (socket) socket.off("receiveMessage", handleReceiveMessage);
     };
-  }, [selectedChat]);
+  }, [socket, selectedChat, businessId]);
 
-  useEffect(() => {
-    console.log("Selected Chat:", selectedChat);
-  }, [selectedChat, socket]);
 
   // Mock chat data
   const mockConversations = [
@@ -274,11 +269,11 @@ export default function ChatPage() {
     (chat) => chat.id === selectedChat
   );
 
-  const isCurrentConversationEnded = currentChat?.isEnded ?? false;
-console.log(currentChat)
+  let isCurrentConversationEnded = currentChat?.isEnded ?? false;
+
   const handleEndConversation = async () => {
     if (selectedChat) {
-      console.log(selectedChat)
+      
       try {
         const response = await axios.patch(`/api/chat?conversationId=${selectedChat}`, {
           isEnded: true,
@@ -290,16 +285,24 @@ console.log(currentChat)
           feedbackForm: "awaiting_rating", isEnded: true} : c
           ));
         }
+        socket?.emit("endConversation", {
+          conversationId: selectedChat,
+          isEnded: true,
+          feedbackForm: "awaiting_rating",
+        });
       } catch (error: any) {
         console.error("Failed to end the conversation:", error);
       }
     }
   };
 
+  const isEmpty = message.trim().length === 0;
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || !currentChat) return;
 
+    if (isCurrentConversationEnded || isEmpty) return;
     const msg: MessagesUI = {
       id: generateObjectId(),
       sender: businessId,
@@ -323,7 +326,7 @@ console.log(currentChat)
         content: message,
       });
       const msg = toMessageUI(response.data);
-      console.log("msg", msg);
+      
       if (socket) {
         socket.emit("sendMessage", { selectedChat, msg });
       }
@@ -333,9 +336,33 @@ console.log(currentChat)
     }
   };
 
+  useEffect(() => {
+    if (!socket) return;
+console.log("ended")
+    const onEndConversation = (payload: any) => {
+      const { conversationId, isEnded, feedbackForm } = payload;
+
+      setConversationsDetails(prev =>
+        prev.map(c =>
+          c.id === conversationId
+            ? { ...c, isEnded: !!isEnded, feedbackForm: feedbackForm ?? c.feedbackForm }
+            : c
+        )
+      );
+
+      // if the ended conversation is currently open, you can also disable input, show modal, etc.
+      // e.g. setIsEnded(true) if you track it per selected chat
+    };
+
+    socket.on("endConversation", onEndConversation);
+    return () => {
+      socket.off("endConversation", onEndConversation);
+    };
+  }, [socket, setConversationsDetails]);
+
+
   const handleSelectChat = (conversationId: any) => {
     setSelectedChat(conversationId);
-    console.log("Selected Chat:", selectedChat);
     setUnreadCounts((prev) => ({
       ...prev,
       [conversationId]: 0,
@@ -354,8 +381,6 @@ console.log(currentChat)
     scrollToBottom();
   }, [messages]);
 
-  console.log("conversations details", conversationsDetails);
-  console.log("messages details", messages);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -368,10 +393,13 @@ console.log(currentChat)
               Connect with verified business partners
             </p>
           </div>
-          <Badge className="bg-emerald-100 text-emerald-800">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Verified Business
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge className="bg-emerald-100 text-emerald-800">
+              <CheckCircle className="h-3 w-3 mr-1" />
+              Verified Business
+            </Badge>
+            <ProfileButton/>
+          </div>
         </div>
       </header>
 
@@ -621,7 +649,7 @@ console.log(currentChat)
                     <Button
                       type="submit"
                       className="bg-rose-500 hover:bg-rose-600"
-                      disabled={isCurrentConversationEnded}
+                      disabled={isCurrentConversationEnded || isEmpty}
                     >
                       <Send className="h-4 w-4" />
                     </Button>
