@@ -9,25 +9,36 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft, Shield } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation";
+import axios from "axios"
+import toast from "react-hot-toast"
+import { toastApiError } from "@/lib/toastApiError"
 
 export default function AdminLoginPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   })
   const [isLoading, setLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-    // Validate email/password
-    console.log("Admin login:", { email: formData.email, password: formData.password })
-    // Redirect to admin dashboard
-    setTimeout(() => {
-      setLoading(false)
-    }, 2000)
-  }
+    try {
+      await axios.post("/api/admin/login", formData, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      toast.success("Login success");
+      router.push("/admin");
+    } catch (err) {
+      toastApiError(err); 
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
@@ -57,7 +68,7 @@ export default function AdminLoginPage() {
                   placeholder="admin@apparelbiz.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
+                  required 
                 />
               </div>
 
@@ -72,17 +83,16 @@ export default function AdminLoginPage() {
                   required
                 />
               </div>
-              <Link href="/admin">
-                <Button type="submit" className="w-full bg-red-600 hover:bg-red-700" disabled={isLoading}>
-                  Sign In
-                </Button>
-              </Link>
+              <Button type="submit" className="w-full bg-red-600 hover:bg-red-700" disabled={isLoading}>
+                {isLoading ? "Signing in..." : "Sign In"}
+              </Button>
             </form>
 
+            {/** */}
             <div className="mt-6 p-4 bg-red-50 rounded-lg border border-red-200">
               <p className="text-sm text-red-800 font-medium mb-1">Security Notice</p>
               <p className="text-xs text-red-700">
-                Admin access requires secure authentication. All admin actions are logged and monitored.
+                Admin access requires secure authentication.
               </p>
             </div>
           </CardContent>

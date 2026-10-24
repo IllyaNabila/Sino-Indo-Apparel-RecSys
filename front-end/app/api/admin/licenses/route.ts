@@ -1,109 +1,115 @@
+// /api/admin/licenses/route.ts
 import { connect } from "@/dbConfig/dbConfig";
 import Business from "@/models/businessModel";
 import BusinessLicense from "@/models/licenseModel";
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
+import { withErrorHandler } from "@/lib/withErrorHandler";
+import { parseJson } from "@/lib/parseJson";
+import { BadRequestError, NotFoundError, ValidationError } from "@/lib/errors";
 
-connect();
+export const GET = withErrorHandler(async (request: NextRequest) => {
+  await connect();
 
-export async function GET(request: NextRequest) {
-  await connect(); //ensures both connection + model registration
-  try {
-    const verificationStatus = request.nextUrl.searchParams
-      .get("status")
-      ?.toLowerCase();
-    let licenses;
-    console.log(verificationStatus);
+  const statusParam = request.nextUrl.searchParams.get("status")?.toLowerCase();
+  const status = statusParam && statusParam !== "all" ? statusParam : null;
 
-    if (!verificationStatus || verificationStatus === "all") {
-      licenses = await BusinessLicense.find()
-        .populate("businessId")
-        .sort({ uploadedAt: 1 });
-    } else {
-      licenses = await BusinessLicense.find({ verificationStatus })
-        .populate("businessId")
-        .sort({ uploadedAt: 1 });
-    }
+  if (
+    statusParam &&
+    !["all", "pending", "approved", "rejected"].includes(statusParam)
+  ) {
+    throw new BadRequestError("Invalid status");
+  }
 
-    const totalPending = await BusinessLicense.countDocuments({
-      verificationStatus: "pending",
-    });
-    const totalApproved = await BusinessLicense.countDocuments({
-      verificationStatus: "approved",
-    });
-    const totalRejected = await BusinessLicense.countDocuments({
-      verificationStatus: "rejected",
-    });
+  const filter = status ? { verificationStatus: status } : {};
 
-    return NextResponse.json({
+  const [licenses, pending, approved, rejected, total] = await Promise.all([
+    BusinessLicense.find(filter)
+      .select("-data") // ✅ exclude base64 blob
+      .populate({
+        path: "businessId",
+        select: "companyName companyEmail role country", // ✅ keep light
+      })
+      .sort({ uploadedAt: -1 }) // newest first
+      .lean(),
+    BusinessLicense.countDocuments({ verificationStatus: "pending" }),
+    BusinessLicense.countDocuments({ verificationStatus: "approved" }),
+    BusinessLicense.countDocuments({ verificationStatus: "rejected" }),
+    BusinessLicense.countDocuments(filter),
+  ]);
+
+  return Response.json(
+    {
       success: true,
       data: licenses,
-      counts: { totalPending, totalApproved, totalRejected },
-    });
-  } catch (error: any) {
-    console.error("Error fetching business licenses:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch licenses" },
-      { status: 500 }
-    );
-  }
-}
+      counts: { pending, approved, rejected },
+      pageInfo: { total },
+    },
+    { status: 200 }
+  );
+});
 
-export async function PATCH(request: NextRequest) {
+
+export const PATCH = withErrorHandler(async (request: NextRequest) => {
+  await connect();
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    const reqBody = await request.json();
-    const { licenseId, verificationStatus, rejectionReason } = reqBody;
-  
+    const { licenseId, verificationStatus, rejectionReason } = await parseJson<{
+      licenseId?: string;
+      verificationStatus?: "pending" | "approved" | "rejected";
+      rejectionReason?: string;
+    }>(request);
+
     if (!licenseId || !verificationStatus) {
-      return NextResponse.json(
-        { success: false, message: "Missing required fields" },
-        { status: 400 }
-      );
+      throw new BadRequestError("Missing required fields");
     }
-    
-    const license = await BusinessLicense.findById({_id: licenseId});
-    if (!license) return NextResponse.json({ success: false, message: "License not found"});
+
+    if (!["pending", "approved", "rejected"].includes(verificationStatus)) {
+      throw new ValidationError("Invalid verificationStatus");
+    }
+
+    if (verificationStatus === "rejected" && !rejectionReason?.trim()) {
+      throw new ValidationError("Rejection reason is required for rejected status");
+    }
+
+    const license = await BusinessLicense.findById(licenseId).session(session);
+    if (!license) {
+      throw new NotFoundError("License not found");
+    }
 
     const verified = verificationStatus === "approved";
+
     const updateData: any = {
       verificationStatus,
-      verifiedAt: new Date()
+      verifiedAt: new Date(),
+      rejectionReason: verificationStatus === "rejected" ? rejectionReason?.trim() : null,
     };
-  
-    if (verificationStatus === "rejected" && !rejectionReason) {
-      return NextResponse.json(
-        { success: false, message: "Rejection reason is required for rejected status" },
-        { status: 400 }
-      );
-    }
-  
-    if (verificationStatus === "rejected") {
-      updateData.rejectionReason = rejectionReason;
-    } else {
-      updateData.rejectionReason = null;
-    }
-
-    const businessId = license.businessId;
 
     const updatedLicense = await BusinessLicense.findByIdAndUpdate(
-      { _id: licenseId },
+      licenseId,
       updateData,
-      { new: true},
+      { new: true, session }
     );
 
-    const updatedBusiness = await Business.findByIdAndUpdate( 
-      {_id: businessId }, 
-      { verified }, 
-      { new: true},
+    const updatedBusiness = await Business.findByIdAndUpdate(
+      license.businessId,
+      { verified },
+      { new: true, session }
     );
-  
-    return NextResponse.json({
-      success: true, data: {updatedLicense, updatedBusiness}
-    });
-  } catch (error: any) {
-    console.error("Error updating license:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to update license" },
-      { status: 500 }
+
+    await session.commitTransaction();
+
+    return Response.json(
+      { success: true, data: { updatedLicense, updatedBusiness } },
+      { status: 200 }
     );
+  } catch (err) {
+    await session.abortTransaction();
+    throw err;
+  } finally {
+    session.endSession();
   }
-}
+});

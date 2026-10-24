@@ -43,8 +43,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
-    fetchUnread();
-
     const newSocket = io(SOCKET_URL, {
       transports: ["websocket"],
       autoConnect: true,
@@ -64,7 +62,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
             ...prev,
             [chatId]: selectedChatRef.current === chatId ? 0 : (prev[chatId] || 0) + 1,
         }))
-        setNotifications((prev) => [...prev, data]);
+        
+
+          // optional: only store notifications when it's NOT the currently open chat
+        if (selectedChatRef.current !== chatId) {
+          setNotifications(prev => [...prev, data]);
+        }
     });
 
     newSocket.on("connect_error", (err) => {
@@ -78,36 +81,24 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [businessId])
 
   useEffect(() => {
-    const updateUnread = async () => {
-      if (Object.keys(unreadCounts).length == 0) return;
-      try {
-        const res = await axios.patch("/api/chat/unread", unreadCounts);
-        if (res.status === 200) {
-          console.log("success")
-        }
-      } catch (error: any) {
-        console.error("Error update unread message:", error);
-      }
-    };
-    updateUnread();
-  }, [notifications, unreadCounts]);
-
-  useEffect(() => {
     console.log("selected chat context:", selectedChat)
   }, [selectedChat]);
 
-  const fetchUnread = async () => {
-    try {
+  useEffect(() => {
+    if (!businessId) return;
+
+    const fetchUnreadCounts = async () => {
+      try {
         const res = await axios.get("/api/chat/unread");
-        if (res.status === 200) {
-          console.log("success")
-        }
         setUnreadCounts(res.data);
-        console.log("Fetched unread counts:", res.data);
       } catch (error: any) {
         console.error("Error fetch unread message:", error);
       }
-  };
+    };
+
+    fetchUnreadCounts();
+  }, [businessId]);
+
 
   const clearNotification = () => setNotifications([]);
 

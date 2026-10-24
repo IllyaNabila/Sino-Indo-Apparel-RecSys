@@ -16,6 +16,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import axios from "axios"
+import dynamic from "next/dynamic";
+import { useBusiness } from "@/context/BusinessContext"
+
+// Dynamically import the ProfileButton with SSR turned off
+const ProfileButton = dynamic(() => import("@/components/ProfileButton"), {
+  ssr: false,
+});
 
 interface ProductData {
   id: string
@@ -46,6 +53,15 @@ type ProductUI = {
 export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true);
+  const { businessId, businessObject } = useBusiness();
+
+  const country = businessObject?.country;
+
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   // Mock product data
   const mockProducts = [
     {
@@ -222,16 +238,25 @@ export default function ProductsPage() {
       {/* Header */}
       <header className="bg-white border-b px-6 py-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">Product Catalog</h1>
-            <p className="text-slate-600">Manage your product listings and showcase your offerings</p>
+            {mounted && country === "china"? 
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">Product Catalog</h1>
+              <p className="text-slate-600">Manage your product listings and showcase your offerings</p>
+            </div> 
+            : <div>
+              <h1 className="text-2xl font-bold text-slate-800">Product Catalog</h1>
+              <p className="text-slate-600">Manage your product request and showcase your needs</p>
+            </div> 
+            }
+          <div className="flex items-center gap-2">
+            <Link href="/products/new">
+              <Button className="bg-rose-500 hover:bg-rose-600">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </Link>
+            <ProfileButton/>
           </div>
-          <Link href="/products/new">
-            <Button className="bg-rose-500 hover:bg-rose-600">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
-          </Link>
         </div>
       </header>
 

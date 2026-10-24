@@ -5,7 +5,7 @@ const businessSchema = new mongoose.Schema({
   businessType: String,
   registrationNumber: String,
   country: String,
-  address: String,
+  address: { type: String, lowercase: true, trim: true },
   phoneNumber: String,
   website: String,
   description: String,

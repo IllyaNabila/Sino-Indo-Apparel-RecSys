@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -38,6 +38,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
 import { useBusiness } from "@/context/BusinessContext";
+import {
+  CHINA_PRIMARY_MARKETS,
+  INDONESIA_PRIMARY_MARKETS,
+  APPAREL_CATEGORIES,
+  APPAREL_MATERIALS,
+} from "@/constants";
 
 interface SurveyData {
   // Business Information
@@ -53,89 +59,6 @@ interface SurveyData {
   seasonPreferences: string[];
 }
 
-const CHINA_PRIMARY_MARKETS: Array<{ value: string; label: string }> = [
-  { value: "Beijing", label: "Beijing (北京)" },
-  { value: "Shanghai", label: "Shanghai (上海)" },
-  { value: "Tianjin", label: "Tianjin (天津)" },
-  { value: "Chongqing", label: "Chongqing (重庆)" },
-  { value: "Guangxi", label: "Guangxi (广西)" },
-  { value: "Inner Mongolia", label: "Inner Mongolia (内蒙古)" },
-  { value: "Ningxia", label: "Ningxia (宁夏)" },
-  { value: "Tibet / Xizang", label: "Tibet / Xizang (西藏)" },
-  { value: "Xinjiang", label: "Xinjiang (新疆)" },
-  { value: "Hong Kong", label: "Hong Kong (香港)" },
-  { value: "Macau", label: "Macau (澳门)" },
-  { value: "Anhui", label: "Anhui (安徽)" },
-  { value: "Fujian", label: "Fujian (福建)" },
-  { value: "Gansu", label: "Gansu (甘肃)" },
-  { value: "Guangdong", label: "Guangdong (广东)" },
-  { value: "Guizhou", label: "Guizhou (贵州)" },
-  { value: "Hainan", label: "Hainan (海南)" },
-  { value: "Hebei", label: "Hebei (河北)" },
-  { value: "Heilongjiang", label: "Heilongjiang (黑龙江)" },
-  { value: "Henan", label: "Henan (河南)" },
-  { value: "Hubei", label: "Hubei (湖北)" },
-  { value: "Hunan", label: "Hunan (湖南)" },
-  { value: "Jiangsu", label: "Jiangsu (江苏)" },
-  { value: "Jiangxi", label: "Jiangxi (江西)" },
-  { value: "Jilin", label: "Jilin (吉林)" },
-  { value: "Liaoning", label: "Liaoning (辽宁)" },
-  { value: "Qinghai", label: "Qinghai (青海)" },
-  { value: "Shaanxi", label: "Shaanxi (陕西)" },
-  { value: "Shandong", label: "Shandong (山东)" },
-  { value: "Shanxi", label: "Shanxi (山西)" },
-  { value: "Sichuan", label: "Sichuan (四川)" },
-  { value: "Yunnan", label: "Yunnan (云南)" },
-  { value: "Zhejiang", label: "Zhejiang (浙江)" },
-];
-
-const INDONESIA_PRIMARY_MARKETS: Array<{ value: string; label: string }> = [
-  { value: "Aceh", label: "Aceh" },
-  { value: "North Sumatra", label: "North Sumatra" },
-  { value: "West Sumatra", label: "West Sumatra" },
-  { value: "Riau", label: "Riau" },
-  { value: "Riau Islands", label: "Riau Islands" },
-  { value: "Jambi", label: "Jambi" },
-  { value: "Bengkulu", label: "Bengkulu" },
-  { value: "South Sumatra", label: "South Sumatra" },
-  { value: "Bangka Belitung Islands", label: "Bangka Belitung Islands" },
-  { value: "Lampung", label: "Lampung" },
-  { value: "Banten", label: "Banten" },
-  {
-    value: "DKI Jakarta",
-    label: "Special Capital Region of Jakarta (DKI Jakarta)",
-  },
-  { value: "West Java", label: "West Java" },
-  { value: "Central Java", label: "Central Java" },
-  {
-    value: "DI Yogyakarta",
-    label: "Special Region of Yogyakarta (DI Yogyakarta)",
-  },
-  { value: "East Java", label: "East Java" },
-  { value: "Bali", label: "Bali" },
-  { value: "West Nusa Tenggara", label: "West Nusa Tenggara" },
-  { value: "East Nusa Tenggara", label: "East Nusa Tenggara" },
-  { value: "West Kalimantan", label: "West Kalimantan" },
-  { value: "Central Kalimantan", label: "Central Kalimantan" },
-  { value: "South Kalimantan", label: "South Kalimantan" },
-  { value: "East Kalimantan", label: "East Kalimantan" },
-  { value: "North Kalimantan", label: "North Kalimantan" },
-  { value: "North Sulawesi", label: "North Sulawesi" },
-  { value: "Gorontalo", label: "Gorontalo" },
-  { value: "Central Sulawesi", label: "Central Sulawesi" },
-  { value: "West Sulawesi", label: "West Sulawesi" },
-  { value: "South Sulawesi", label: "South Sulawesi" },
-  { value: "Southeast Sulawesi", label: "Southeast Sulawesi" },
-  { value: "Maluku", label: "Maluku" },
-  { value: "North Maluku", label: "North Maluku" },
-  { value: "Papua", label: "Papua" },
-  { value: "West Papua", label: "West Papua" },
-  { value: "Southwest Papua", label: "Southwest Papua" },
-  { value: "Central Papua", label: "Central Papua" },
-  { value: "Highland Papua", label: "Highland Papua" },
-  { value: "South Papua", label: "South Papua" },
-];
-
 export default function SurveyPage() {
   const { businessObject } = useBusiness();
   const router = useRouter();
@@ -147,14 +70,19 @@ export default function SurveyPage() {
     primaryMarkets: [],
     productCategories: [],
     materials: [],
-    priceRange: [10, 50],
-    volumeRange: [500, 5000],
+    priceRange: [],
+    volumeRange: [],
     customPreferences: [],
     seasonPreferences: [],
   });
+  const [mounted, setMounted] = useState(false);
 
   const totalSteps = 3;
   const progress = (currentStep / totalSteps) * 100;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const toCheckboxId = (prefix: string, value: string) =>
     `${prefix}-${value
@@ -226,62 +154,55 @@ export default function SurveyPage() {
           <Label className="text-base font-medium mb-2">
             Primary Markets (Select all that apply)
           </Label>
-          {businessObject.country === "indonesia" ? (
-            <>
-              {/* China Region */}
-              <div className="mt-4">
-                <Label className="text-sm font-semibold text-gray-700">China</Label>
-                <div className="grid grid-cols-2 gap-3 mt-2">
-                  {CHINA_PRIMARY_MARKETS.map((market) => {
-                    const id = toCheckboxId("primaryMarket", market.value);
-                    return (
-                      <div key={market.value} className="flex items-center space-x-2">
+          {!mounted ? <p className="text-sm text-gray-500">Loading…</p> : businessObject?.country === "indonesia" ? (
+            <div className="mt-4">
+              <Label className="text-sm font-semibold text-gray-700">China</Label>
+
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                {CHINA_PRIMARY_MARKETS.map((market) => {
+                  const id = toCheckboxId("primaryMarket", market.value);
+                  const selected = (surveyData?.primaryMarkets ?? []).includes(market.value);
+
+                  return (
+                    <div key={market.value} className="flex items-center space-x-2">
                       <Checkbox
                         id={id}
-                        checked={surveyData.primaryMarkets.includes(market.value)}
-                        onCheckedChange={() =>
-                          handleArrayToggle("primaryMarkets", market.value)
-                        }
+                        checked={selected}
+                        onCheckedChange={() => handleArrayToggle("primaryMarkets", market.value)}
                       />
                       <Label htmlFor={id} className="text-sm">
                         {market.label}
                       </Label>
                     </div>
-                    );
-                  })}
-                </div>
+                  );
+                })}
               </div>
-            </>
-          ) : businessObject.country === "china" ? (
-            <>
-              {/* Indonesia Region */}
-              <div className="mt-6">
-                <Label className="text-sm font-semibold text-gray-700">
-                  Indonesia
-                </Label>
-                <div className="grid grid-cols-2 gap-3 mt-2">
-                  {INDONESIA_PRIMARY_MARKETS.map((market) => {
-                    const id = toCheckboxId("primaryMarket", market.value);
-                    return (
-                      <div key={market.value} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={id}
-                          checked={surveyData.primaryMarkets.includes(market.value)}
-                          onCheckedChange={() =>
-                            handleArrayToggle("primaryMarkets", market.value)
-                          }
-                        />
-                        <Label htmlFor={id} className="text-sm">
-                          {market.label}
-                        </Label>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          ) : null } 
+            </div>
+          ) : businessObject?.country === "china" ? (
+            <div className="mt-6">
+              <Label className="text-sm font-semibold text-gray-700">Indonesia</Label>
 
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                {INDONESIA_PRIMARY_MARKETS.map((market) => {
+                  const id = toCheckboxId("primaryMarket", market.value);
+                  const selected = (surveyData?.primaryMarkets ?? []).includes(market.value);
+
+                  return (
+                    <div key={market.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={id}
+                        checked={selected}
+                        onCheckedChange={() => handleArrayToggle("primaryMarkets", market.value)}
+                      />
+                      <Label htmlFor={id} className="text-sm">
+                        {market.label}
+                      </Label>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
@@ -301,30 +222,17 @@ export default function SurveyPage() {
             Product Categories (Select all that apply)
           </Label>
           <div className="grid grid-cols-2 gap-3 mt-2">
-            {[
-              "T-Shirts",
-              "Jeans",
-              "Dresses",
-              "Hoodies",
-              "Jackets",
-              "Shirts",
-              "Pants",
-              "Skirts",
-              "Activewear",
-              "Underwear",
-              "Accessories",
-              "Children's Wear",
-            ].map((category) => (
-              <div key={category} className="flex items-center space-x-2">
+            {APPAREL_CATEGORIES.map((category) => (
+              <div key={category.value} className="flex items-center space-x-2">
                 <Checkbox
-                  id={category}
-                  checked={surveyData.productCategories.includes(category)}
+                  id={category.value}
+                  checked={surveyData.productCategories.includes(category.value)}
                   onCheckedChange={() =>
-                    handleArrayToggle("productCategories", category)
+                    handleArrayToggle("productCategories", category.value)
                   }
                 />
-                <Label htmlFor={category} className="text-sm">
-                  {category}
+                <Label htmlFor={category.value} className="text-sm">
+                  {category.label}
                 </Label>
               </div>
             ))}
@@ -336,30 +244,17 @@ export default function SurveyPage() {
             Preferred Materials (Select all that apply)
           </Label>
           <div className="grid grid-cols-2 gap-3 mt-2">
-            {[
-              "Cotton",
-              "Organic Cotton",
-              "Polyester",
-              "Recycled Polyester",
-              "Wool",
-              "Silk",
-              "Linen",
-              "Bamboo",
-              "Hemp",
-              "Denim",
-              "Spandex",
-              "Modal",
-            ].map((material) => (
-              <div key={material} className="flex items-center space-x-2">
+            {APPAREL_MATERIALS.map((material) => (
+              <div key={material.value} className="flex items-center space-x-2">
                 <Checkbox
-                  id={material}
-                  checked={surveyData.materials.includes(material)}
+                  id={material.value}
+                  checked={surveyData.materials.includes(material.value)}
                   onCheckedChange={() =>
-                    handleArrayToggle("materials", material)
+                    handleArrayToggle("materials", material.value)
                   }
                 />
-                <Label htmlFor={material} className="text-sm">
-                  {material}
+                <Label htmlFor={material.value} className="text-sm">
+                  {material.label}
                 </Label>
               </div>
             ))}
@@ -420,6 +315,7 @@ export default function SurveyPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
+        {/**
         <div className="mb-6">
           <Link
             href={`/auth/license-upload`}
@@ -428,7 +324,7 @@ export default function SurveyPage() {
             <ArrowLeft className="h-4 w-4" />
             <span>Back to license upload</span>
           </Link>
-        </div>
+        </div> */}
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center pb-6">
             <CardDescription>
@@ -510,7 +406,7 @@ export default function SurveyPage() {
             <div className="text-center mt-4">
               <Button
                 variant="ghost"
-                onClick={() => router.push("/dashboard")}
+                onClick={handleSubmit}
                 className="text-slate-500 hover:text-slate-700"
               >
                 Skip for now (you can complete this later)

@@ -105,7 +105,6 @@ export async function GET(req: NextRequest) {
         const businessId = decoded.businessId;
 
         const id = req.nextUrl.searchParams.get("id");
-        console.log("hello id:", id);
 
         if (id) {
             // Fetch specific product by ID and businessId

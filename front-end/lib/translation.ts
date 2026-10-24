@@ -3,7 +3,7 @@ import axios, { AxiosError } from "axios";
 
 export async function detectLang(text: string): Promise<"en" | "id" | "zh"> {
   if (/[\u4e00-\u9fff]/.test(text)) return "zh";
-  if (/\b(saya|yang|dan|dengan|untuk|bahan|harga|ini|mau|bisa|halo)\b/i.test(text)) return "id";
+  if (/\b(saya|yang|dan|dengan|untuk|bahan|harga|ini|mau|bisa|halo|butuh)\b/i.test(text)) return "id";
   return "en";
 }
 
