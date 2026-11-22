@@ -11,7 +11,27 @@ Thank you for contributing! This project uses a **Fork & Pull Request** workflow
    git remote add upstream https://github.com/IllyaNabila/Sino-Indo-Apparel-RecSys.git
    ```
 
-## 2. Local Environment Setup
+## 2. Database Setup (MongoDB)
+Collections are created automatically by Mongoose — no manual migrations are needed. Use your own development database:
+
+1. **Create a database** (choose one):
+   - **MongoDB Atlas (Recommended):** Create a free **M0** cluster at [mongodb.com](https://www.mongodb.com/), add a database user, and allow your IP under **Network Access**.
+   - **Local MongoDB:** Run MongoDB locally at `mongodb://localhost:27017/test`.
+2. **Use the `test` database name** in `MONGO_URI` (e.g. `.../test?retryWrites=true&w=majority`), as `ai_service/app/db.py` connects to `client["test"]`.
+3. **Set `MONGO_URI`** in both `front-end/.env.local` and `ai_service/.env`.
+4. **Verify connection & seed an admin user** (after installing `front-end` dependencies):
+   ```bash
+   cd front-end
+   npm run test:db      # verifies MongoDB connection
+   npm run seed:admin   # creates admin user from ADMIN_EMAIL / ADMIN_PASSWORD
+   ```
+   Optionally verify the AI service connection:
+   ```bash
+   cd ai_service
+   python -m app.db
+   ```
+
+## 3. Local Environment Setup
 This repository has three services. Copy each `.env.example` and fill in your own local/dev credentials (MongoDB, Gemini API key, etc.):
 
 ### A. Front-end (`front-end/`, port `3000`)
@@ -40,7 +60,7 @@ pip install -r requirements.txt
 bash run.sh
 ```
 
-## 3. Create a Branch & Make Changes
+## 4. Create a Branch & Make Changes
 Always branch off the latest `main`:
 ```bash
 git checkout main
@@ -54,7 +74,7 @@ npm test
 npm run lint
 ```
 
-## 4. Open a Pull Request
+## 5. Open a Pull Request
 1. Push your branch to **your fork**:
    ```bash
    git push origin feat/your-feature-name
